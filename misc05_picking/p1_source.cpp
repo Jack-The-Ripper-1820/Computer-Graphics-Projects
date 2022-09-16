@@ -117,7 +117,7 @@ size_t NumVerts[NumObjects];	// Useful for glDrawArrays command
 size_t NumIdcs[NumObjects];	// Useful for glDrawElements command
 
 // Initialize ---  global objects -- not elegant but ok for this project
-const size_t IndexCount = 4;
+const size_t IndexCount = 8;
 Vertex Vertices[IndexCount];
 GLushort Indices[IndexCount];
 
@@ -208,10 +208,13 @@ void initOpenGL(void) {
 
 	// Define pickingColor array for picking program
 	// use a for-loop here
-	pickingColor[0] = 0 / 255.0f;
+	for (int i = 0; i < IndexCount; i++) {
+		pickingColor[i] = i / 255.0f;
+	}
+	/*pickingColor[0] = 0 / 255.0f;
 	pickingColor[1] = 1 / 255.0f;
 	pickingColor[2] = 2 / 255.0f;
-	pickingColor[3] = 3 / 255.0f;
+	pickingColor[3] = 3 / 255.0f;*/
 
 	// Define objects
 	createObjects();
@@ -274,15 +277,27 @@ void createObjects(void) {
 	// an array of vertices {pos;color} and
 	// an array of indices (no picking needed here) (no need for indices)
 	// ATTN: Project 1A, Task 1 == Add the points in your scene
-	Vertices[0] = { { 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } };
-	Vertices[1] = { { -1.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } };
-	Vertices[2] = { { -1.0f, -1.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } };
-	Vertices[3] = { { 1.0f, -1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f } };
+	for (int i = 0; i < IndexCount; i++)
+	{
+		float theta = 2.0f * 3.1415926f * float(i) / float(IndexCount);//get the current angle
 
-	Indices[0] = 0;
+		float x = 1 * cosf(theta);//calculate the x component
+		float y = 1 * sinf(theta);//calculate the y component
+		Vertices[i] = { {x, y, 0.0f, 1.0f}, { static_cast <float> (rand()) / static_cast <float> (RAND_MAX), static_cast <float> (rand()) / static_cast <float> (RAND_MAX), 
+			static_cast <float> (rand()) / static_cast <float> (RAND_MAX), static_cast <float> (rand()) / static_cast <float> (RAND_MAX)} };
+		Indices[i] = i;
+		//glVertex2f(x + cx, y + cy);//output vertex
+
+	}
+	//Vertices[0] = { { 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } };
+	/*Vertices[1] = { { -1.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } };
+	Vertices[2] = { { -1.0f, -1.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } };
+	Vertices[3] = { { 1.0f, -1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f } };*/
+
+	/*Indices[0] = 0;
 	Indices[1] = 1;
 	Indices[2] = 2;
-	Indices[3] = 3;
+	Indices[3] = 3;*/
 
 	// ATTN: Project 1B, Task 1 == create line segments to connect the control points
 
@@ -346,6 +361,7 @@ void pickVertex(void) {
 	// ATTN: Project 1A, Task 2
 	// Find a way to change color of selected vertex and
 	// store original color
+
 
 	// Uncomment these lines if you wan to see the picking shader in effect
 	// glfwSwapBuffers(window);
