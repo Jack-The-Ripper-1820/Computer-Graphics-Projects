@@ -290,9 +290,6 @@ void createObjects(void) {
 
 			float x = 1 * cosf(theta);
 			float y = 1 * sinf(theta);
-			/*Vertices[i] = { {x, y, 0.0f, 1.0f}, { static_cast <float> (rand()) / static_cast <float> (RAND_MAX), static_cast <float> (rand()) / static_cast <float> (RAND_MAX),
-				static_cast <float> (rand()) / static_cast <float> (RAND_MAX), static_cast <float> (rand()) / static_cast <float> (RAND_MAX)} };*/
-			//float coords[4] = { x, y, 0.0f, 1.0f };
 			Vertices[i].SetCoords( new float[4] { x, y, 0.0f, 1.0f });
 			Indices[i] = i;
 			//glVertex2f(x + cx, y + cy);//output vertex
