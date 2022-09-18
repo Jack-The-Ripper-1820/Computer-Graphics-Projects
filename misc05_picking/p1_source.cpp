@@ -4,6 +4,7 @@
 #include <vector>
 #include <array>
 #include <sstream>
+#include <iostream>
 
 // Include GLEW
 #include <GL/glew.h>
@@ -13,6 +14,7 @@
 
 // Include GLM
 #include <glm/glm.hpp>
+#include <glm/ext.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -123,6 +125,9 @@ GLushort Indices[IndexCount];
 
 // ATTN: DON'T FORGET TO INCREASE THE ARRAY SIZE IN THE PICKING VERTEX SHADER WHEN YOU ADD MORE PICKING COLORS
 float pickingColor[IndexCount];
+
+bool initFlag = true;
+
 
 int initWindow(void) {
 	// Initialise GLFW
@@ -277,20 +282,37 @@ void createObjects(void) {
 	// an array of vertices {pos;color} and
 	// an array of indices (no picking needed here) (no need for indices)
 	// ATTN: Project 1A, Task 1 == Add the points in your scene
-	for (int i = 0; i < IndexCount; i++)
-	{
-		float theta = 2.0f * 3.1415926f * float(i) / float(IndexCount);//get the current angle
 
-		float x = 1 * cosf(theta);//calculate the x component
-		float y = 1 * sinf(theta);//calculate the y component
-		Vertices[i] = { {x, y, 0.0f, 1.0f}, { static_cast <float> (rand()) / static_cast <float> (RAND_MAX), static_cast <float> (rand()) / static_cast <float> (RAND_MAX), 
-			static_cast <float> (rand()) / static_cast <float> (RAND_MAX), static_cast <float> (rand()) / static_cast <float> (RAND_MAX)} };
-		Indices[i] = i;
-		//glVertex2f(x + cx, y + cy);//output vertex
+	if (initFlag) {
+		for (int i = 0; i < IndexCount; i++)
+		{
+			float theta = 2.0f * 3.1415926f * float(i) / float(IndexCount);//get the current angle
 
+			float x = 1 * cosf(theta);
+			float y = 1 * sinf(theta);
+			/*Vertices[i] = { {x, y, 0.0f, 1.0f}, { static_cast <float> (rand()) / static_cast <float> (RAND_MAX), static_cast <float> (rand()) / static_cast <float> (RAND_MAX),
+				static_cast <float> (rand()) / static_cast <float> (RAND_MAX), static_cast <float> (rand()) / static_cast <float> (RAND_MAX)} };*/
+			//float coords[4] = { x, y, 0.0f, 1.0f };
+			Vertices[i].SetCoords( new float[4] { x, y, 0.0f, 1.0f });
+			Indices[i] = i;
+			//glVertex2f(x + cx, y + cy);//output vertex
+		}
+
+		initFlag = false;
 	}
-	//Vertices[0] = { { 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } };
-	/*Vertices[1] = { { -1.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } };
+
+	Vertices[0].SetColor(new float[4] { 0.0f, 0.0f, 1.0f, 1.0f });
+	Vertices[1].SetColor(new float[4] { 0.0f, 1.0f, 0.0f, 1.0f });
+	Vertices[2].SetColor(new float[4] { 0.0f, 1.0f, 1.0f, 1.0f });
+	Vertices[3].SetColor(new float[4] { 1.0f, 0.0f, 0.0f, 1.0f });
+	Vertices[4].SetColor(new float[4] { 1.0f, 0.0f, 1.0f, 1.0f });
+	Vertices[5].SetColor(new float[4] { 1.0f, 1.0f, 0.0f, 1.0f });
+	Vertices[6].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
+	Vertices[7].SetColor(new float[4] { 0.6f, 0.4f, 0.2f, 1.0f });
+
+
+	/*Vertices[0] = {{1.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}};
+	Vertices[1] = { { -1.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } };
 	Vertices[2] = { { -1.0f, -1.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } };
 	Vertices[3] = { { 1.0f, -1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f } };*/
 
@@ -309,6 +331,9 @@ void createObjects(void) {
 	// the tangent, normal, and binormal
 }
 
+
+float* prevColor;
+
 void pickVertex(void) {
 	// Clear the screen in white
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -323,7 +348,7 @@ void pickVertex(void) {
 		// Send the MVP to the shader (that is currently bound)
 		// as data type uniform (shared by all shader instances)
 		glUniformMatrix4fv(PickingMatrixID, 1, GL_FALSE, &MVP[0][0]);
-
+		
 		// pass in the picking color array to the shader
 		glUniform1fv(pickingColorArrayID, IndexCount, pickingColor);
 
@@ -357,26 +382,49 @@ void pickVertex(void) {
 
 	// Convert the color back to an integer ID
 	gPickedIndex = int(data[0]);
-	
+
 	// ATTN: Project 1A, Task 2
 	// Find a way to change color of selected vertex and
 	// store original color
+	prevColor = Vertices[gPickedIndex].Color;
+	 
+	// Answer : the functionality needed here is in moveVertex function because the code will get redundant if I put it here as well
+	// but the code which to be put here is given below but commented to avoid redundancy
 
-
+	/*float newColor[4] = { 0, 0, 0, 1 };
+	Vertices[gPickedIndex].SetColor(newColor);
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[0]);
+	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[0], Vertices, GL_STATIC_DRAW);*/
+	
 	// Uncomment these lines if you wan to see the picking shader in effect
-	// glfwSwapBuffers(window);
-	// continue; // skips the visible rendering
+	//glfwSwapBuffers(window);
+	//continue; // skips the visible rendering
 }
 
 // ATTN: Project 1A, Task 3 == Retrieve your cursor position, get corresponding world coordinate, and move the point accordingly
 
 // ATTN: Project 1C, Task 1 == Keep track of z coordinate for selected point and adjust its value accordingly based on if certain
 // buttons are being pressed
+
+float* worldCoords; //to be used in moveVertex and mouseCallback
+
 void moveVertex(void) {
 	glm::mat4 ModelMatrix = glm::mat4(1.0);
 	GLint viewport[4];
 	glGetIntegerv(GL_VIEWPORT, viewport);
 	glm::vec4 vp = glm::vec4(viewport[0], viewport[1], viewport[2], viewport[3]);
+	double xpos, ypos;
+
+	glfwGetCursorPos(window, &xpos, &ypos);
+	vec3 unprojected = glm::unProject(glm::vec3(xpos, ypos, 0.0), ModelMatrix, gProjectionMatrix, vp);
+	worldCoords = new float[4]{ -unprojected[0], -unprojected[1], unprojected[2], 1.0f};
+
+	float newColor[4] = { 0, 0, 0, 1 };
+	Vertices[gPickedIndex].SetCoords(worldCoords);
+	Vertices[gPickedIndex].SetColor(newColor);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[0]);
+	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[0], Vertices, GL_STATIC_DRAW);
 
 	if (gPickedIndex >= IndexCount) { 
 		// Any number > vertices-indices is background!
@@ -387,6 +435,8 @@ void moveVertex(void) {
 		oss << "point " << gPickedIndex;
 		gMessage = oss.str();
 	}
+
+	renderScene();
 }
 
 void renderScene(void) {    
@@ -449,6 +499,14 @@ void cleanup(void) {
 static void mouseCallback(GLFWwindow* window, int button, int action, int mods) {
 	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
 		pickVertex();
+	}
+
+	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
+		Vertices[gPickedIndex].SetColor(prevColor);
+		Vertices[gPickedIndex].SetCoords(worldCoords);
+
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[0]);
+		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[0], Vertices, GL_STATIC_DRAW);
 	}
 }
 
