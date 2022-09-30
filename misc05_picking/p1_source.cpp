@@ -119,7 +119,7 @@ size_t NumVerts[NumObjects];	// Useful for glDrawArrays command
 size_t NumIdcs[NumObjects];	// Useful for glDrawElements command
 
 // Initialize ---  global objects -- not elegant but ok for this project
-const size_t IndexCount = 8;
+const size_t IndexCount = 10;
 Vertex Vertices[IndexCount];
 GLushort Indices[IndexCount];
 
@@ -216,10 +216,6 @@ void initOpenGL(void) {
 	for (int i = 0; i < IndexCount; i++) {
 		pickingColor[i] = i / 255.0f;
 	}
-	/*pickingColor[0] = 0 / 255.0f;
-	pickingColor[1] = 1 / 255.0f;
-	pickingColor[2] = 2 / 255.0f;
-	pickingColor[3] = 3 / 255.0f;*/
 
 	// Define objects
 	createObjects();
@@ -284,39 +280,46 @@ void createObjects(void) {
 	// ATTN: Project 1A, Task 1 == Add the points in your scene
 
 	if (initFlag) {
-		for (int i = 0; i < IndexCount; i++)
+
+		Vertices[0].SetCoords(new float[4] {0, 0.0f, 0.0f, 1.0f});
+		Vertices[1].SetCoords(new float[4] {0.809f, 0.588f, 0.0f, 1.0f});
+		Vertices[2].SetCoords(new float[4] {0.501f, 1.541f, 0.0f, 1.0f});
+		Vertices[3].SetCoords(new float[4] {-0.501f, 1.541f, 0.0f, 1.0f});
+		Vertices[4].SetCoords(new float[4] {-0.809f, 0.588f, 0.0f, 1.0f});
+		Vertices[5].SetCoords(new float[4] {0, 0.0f, 0.0f, 1.0f});
+		Vertices[6].SetCoords(new float[4] {0.809f, -0.588f, 0.0f, 1.0f});
+		Vertices[7].SetCoords(new float[4] {0.501f, -1.541f, 0.0f, 1.0f});
+		Vertices[8].SetCoords(new float[4] {-0.501f, -1.541f, 0.0f, 1.0f});
+		Vertices[9].SetCoords(new float[4] {-0.809f, -0.588f, 0.0f, 1.0f});
+
+		for (int i = 0; i < IndexCount; i++) {
+			Indices[i] = i;
+		}
+
+		/*for (int i = 0; i < IndexCount; i++)
 		{
-			float theta = 2.0f * 3.1415926f * float(i) / float(IndexCount);//get the current angle
+			float theta = 2.0f * 3.1415926f * float(i) / float(IndexCount); 
 
 			float x = 1 * cosf(theta);
 			float y = 1 * sinf(theta);
 			Vertices[i].SetCoords( new float[4] { x, y, 0.0f, 1.0f });
 			Indices[i] = i;
-			//glVertex2f(x + cx, y + cy);//output vertex
-		}
+		}*/
 
 		initFlag = false;
 	}
 
-	Vertices[0].SetColor(new float[4] { 0.0f, 0.0f, 1.0f, 1.0f });
-	Vertices[1].SetColor(new float[4] { 0.0f, 1.0f, 0.0f, 1.0f });
-	Vertices[2].SetColor(new float[4] { 0.0f, 1.0f, 1.0f, 1.0f });
-	Vertices[3].SetColor(new float[4] { 1.0f, 0.0f, 0.0f, 1.0f });
-	Vertices[4].SetColor(new float[4] { 1.0f, 0.0f, 1.0f, 1.0f });
+	Vertices[0].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
+	Vertices[1].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
+	Vertices[2].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
+	Vertices[3].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
+	Vertices[4].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
 	Vertices[5].SetColor(new float[4] { 1.0f, 1.0f, 0.0f, 1.0f });
 	Vertices[6].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
-	Vertices[7].SetColor(new float[4] { 0.6f, 0.4f, 0.2f, 1.0f });
+	Vertices[7].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
+	Vertices[8].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
+	Vertices[9].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
 
-
-	/*Vertices[0] = {{1.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}};
-	Vertices[1] = { { -1.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } };
-	Vertices[2] = { { -1.0f, -1.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } };
-	Vertices[3] = { { 1.0f, -1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f } };*/
-
-	/*Indices[0] = 0;
-	Indices[1] = 1;
-	Indices[2] = 2;
-	Indices[3] = 3;*/
 
 	// ATTN: Project 1B, Task 1 == create line segments to connect the control points
 
@@ -384,14 +387,11 @@ void pickVertex(void) {
 	// Find a way to change color of selected vertex and
 	// store original color
 	prevColor = Vertices[gPickedIndex].Color;
-	 
-	// Answer : the functionality needed here is in moveVertex function because the code will get redundant if I put it here as well
-	// but the code which to be put here is given below but commented to avoid redundancy
 
-	/*float newColor[4] = { 0, 0, 0, 1 };
+	float newColor[4] = { 0, 0, 0, 1 };
 	Vertices[gPickedIndex].SetColor(newColor);
 	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[0]);
-	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[0], Vertices, GL_STATIC_DRAW);*/
+	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[0], Vertices, GL_STATIC_DRAW);
 	
 	// Uncomment these lines if you wan to see the picking shader in effect
 	//glfwSwapBuffers(window);
