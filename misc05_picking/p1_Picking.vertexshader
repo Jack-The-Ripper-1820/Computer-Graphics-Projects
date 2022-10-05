@@ -6,7 +6,7 @@ layout(location = 0) in vec4 vertexPosition_modelspace;
 out vec4 vs_vertexColor;
 
 // Values that stay constant for the whole mesh.
-uniform float PickingColorArray[8];		// picking ID mark (one per vertex/point)
+uniform float PickingColorArray[400];		// picking ID mark (one per vertex/point)
 uniform mat4 MVP;
 
 void main(){
