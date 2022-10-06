@@ -307,36 +307,17 @@ void subDivide() {
 		return;
 	}
 
-	int n = P[k - 1].size();
+	int n = P[k].size();
 	
-	for (int i = 0; i < n; i++) {
-		std::vector<float> P1Pos = { 0.0f, 0.0f, 0.0f, 1.f };
-		std::vector<float> P2Pos = { 0.0f, 0.0f, 0.0f, 1.f };
-		std::vector<float> P3Pos = { 0.0f, 0.0f, 0.0f, 1.f };
-
-		cout << "before index check" << endl;
-
-		P1Pos = { P[k - 1][(i - 1 + n) % n].Position[0], P[k - 1][(i - 1 + n) % n].Position[1], 0.0f, 1.f };
-		P2Pos = { P[k - 1][i].Position[0], P[k - 1][i].Position[1], 0.0f, 1.f };
-		P3Pos = { P[k - 1][(i + 1) % n].Position[0], P[k - 1][(i + 1) % n].Position[1], 0.0f, 1.f };
-
-
-		Vertex *v1 = new Vertex(), *v2 = new Vertex();
-		v1->SetCoords(new float[4] { 0.5f * (P1Pos[0] + P2Pos[0]), 0.5f * (P1Pos[1] + P2Pos[1]), 0.0f, 1.0f});
+	/*for (int i = 0; i < n; i++) {
+		Vertex* v1 = new Vertex();
+		v1->SetCoords(new float[4] {P[k][i].Position[0], P[k][i].Position[1], 0.0f, 1.0f});
 		v1->SetColor(new float[4] {0.0f, 100.0f, 100.0f, 1.0f});
-		v2->SetCoords(new float[4] { (P1Pos[0] + 6 * P2Pos[0] + P3Pos[0]) / 8, (P1Pos[1] + 6 * P2Pos[1] + P3Pos[1]) / 8, 0.0f, 1.0f});
-		v2->SetColor(new float[4] {0.0f, 100.0f, 100.0f, 1.0f});
-
-
-		/*P[k].push_back(*v1);
-		P[k].push_back(*v2);*/
 
 		SubVertices[ind++] = *v1;
-		SubVertices[ind++] = *v2;
 		cout << "ind: " << ind << endl;
-	}
+	}*/
 
-	n = P[k].size();
 	cout << "k and n : " << k << " " << n << endl;
 }
 
@@ -354,7 +335,7 @@ void createBB() {
 		v2->SetCoords(new float[4] {C[i][1][0], C[i][1][1], 0.0f, 1.0f}), v2->SetColor(new float[4] { 255.0f, 255.0f, 0.0f, 1.0f });
 		v3->SetCoords(new float[4] {C[i][2][0], C[i][2][1], 0.0f, 1.0f}), v3->SetColor(new float[4] { 255.0f, 255.0f, 0.0f, 1.0f });
 		v4->SetCoords(new float[4] {C[i][3][0], C[i][3][1], 0.0f, 1.0f}), v4->SetColor(new float[4] { 255.0f, 255.0f, 0.0f, 1.0f });
-		Vertices[i + 630] = *v1, Vertices[i + 630 + 1] = *v2, Vertices[i + 630 + 2] = *v3, Vertices[i + 630 + 3] = *v4;
+		//Vertices[i + 630] = *v1, Vertices[i + 630 + 1] = *v2, Vertices[i + 630 + 2] = *v3, Vertices[i + 630 + 3] = *v4;
 	}
 }
 void createObjects(void) {
@@ -421,8 +402,6 @@ void createObjects(void) {
 		P[0].push_back(Vertices[i]);
 	}
 
-	int subInd = 0;
-
 	for (int k = 1; k < 6; k++) {
 		int n = P[k - 1].size();
 		P[k] = vector<Vertex>();
@@ -454,6 +433,24 @@ void createObjects(void) {
 				SubVertices[subInd++] = *v2;
 			}*/
 			cout << "ind: " << ind << endl;
+		}
+	}
+
+	if (key1Flag) {
+		Vertex* v = new Vertex();
+		fill(begin(SubVertices), end(SubVertices), *v);
+		int subInd = 0;
+		for (int ki = 1; ki < k && k < 6; ki++) {
+			int n = P[ki].size();
+
+			for (int i = 0; i < n; i++) {
+				Vertex* v1 = new Vertex();
+				v1->SetCoords(new float[4] {P[ki][i].Position[0], P[ki][i].Position[1], 0.0f, 1.0f});
+				v1->SetColor(new float[4] {0.0f, 100.0f, 100.0f, 1.0f});
+
+				SubVertices[subInd++] = *v1;
+				cout << "ind: " << subInd << endl;
+			}
 		}
 	}
 	
@@ -524,10 +521,10 @@ void pickVertex(void) {
 	// store original color
 	prevColor = Vertices[gPickedIndex].Color;
 
-	float newColor[4] = { 0, 0, 0, 1 };
+	/*float newColor[4] = { 0, 0, 0, 1 };
 	Vertices[gPickedIndex].SetColor(newColor);
 	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[0]);
-	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[0], Vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[0], Vertices, GL_STATIC_DRAW);*/
 	
 	// Uncomment these lines if you wan to see the picking shader in effect
 	//glfwSwapBuffers(window);
@@ -539,7 +536,7 @@ void pickVertex(void) {
 // ATTN: Project 1C, Task 1 == Keep track of z coordinate for selected point and adjust its value accordingly based on if certain
 // buttons are being pressed
 
-float* worldCoords; //to be used in moveVertex and mouseCallback
+float* worldCoords = new float[4] {0.0f, 0.0f, 0.0f, 1.0f}; //to be used in moveVertex and mouseCallback
 
 void moveVertex(void) {
 	glm::mat4 ModelMatrix = glm::mat4(1.0);
