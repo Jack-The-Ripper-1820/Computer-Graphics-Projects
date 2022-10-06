@@ -109,7 +109,7 @@ GLuint gPickedIndex;
 std::string gMessage;
 
 // ATTN: INCREASE THIS NUMBER AS YOU CREATE NEW OBJECTS
-const GLuint NumObjects = 1; // Number of objects types in the scene
+const GLuint NumObjects = 2; // Number of objects types in the scene
 
 // Keeps track of IDs associated with each object
 GLuint VertexArrayId[NumObjects];
@@ -126,6 +126,8 @@ const size_t IndexCount = 1000;
 Vertex Vertices[IndexCount];
 GLushort Indices[IndexCount];
 Vertex InitVertices[IndexCount];
+
+Vertex subVertices[IndexCount];
 
 // ATTN: DON'T FORGET TO INCREASE THE ARRAY SIZE IN THE PICKING VERTEX SHADER WHEN YOU ADD MORE PICKING COLORS
 float pickingColor[IndexCount];
@@ -292,10 +294,6 @@ void subDivide() {
 		}
 		ind = 10;
 		P = InitP;
-		// Dark blue background
-		glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-		// Re-clear the screen for visible rendering
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		return;
 	}
 
@@ -325,6 +323,8 @@ void subDivide() {
 
 		Vertices[ind++] = *v1;
 		Vertices[ind++] = *v2;
+		/*subVertices[ind++] = *v1;
+		subVertices[ind++] = *v2;*/
 		cout << "ind: " << ind << endl;
 	}
 
