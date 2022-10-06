@@ -131,22 +131,13 @@ const size_t SubIndexCount = 620;
 Vertex SubVertices[SubIndexCount];
 GLushort SubIndices[SubIndexCount];
 
-//const size_t BBIndexCount = 40;
-//Vertex BBVertices[BBIndexCount];
-//GLushort BBIndices[BBIndexCount];
-//
-//const size_t CRIndexCount = 40;
-//Vertex CRVertices[CRIndexCount];
-//GLushort CRIndices[CRIndexCount];
-
 // ATTN: DON'T FORGET TO INCREASE THE ARRAY SIZE IN THE PICKING VERTEX SHADER WHEN YOU ADD MORE PICKING COLORS
 float pickingColor[IndexCount];
 
 bool initFlag = true;
 std::vector<std::vector<Vertex>> P, InitP;
 bool key1Flag = false;
-//bool key2Flag = false;
-//bool key3Flag = false;
+
 
 int initWindow(void) {
 	// Initialise GLFW
@@ -254,20 +245,6 @@ void initOpenGL(void) {
 	IndexBufferSize[obj] = sizeof(SubIndices);
 	NumIdcs[obj] = SubIndexCount;
 	createVAOs(SubVertices, SubIndices, obj);
-
-	/*obj++;
-
-	VertexBufferSize[obj] = sizeof(BBVertices);
-	IndexBufferSize[obj] = sizeof(BBIndices);
-	NumIdcs[obj] = BBIndexCount;
-	createVAOs(BBVertices, BBIndices, obj);*/
-
-	/*obj++;
-
-	VertexBufferSize[obj] = sizeof(CRVertices);
-	IndexBufferSize[obj] = sizeof(CRIndices);
-	NumIdcs[obj] = CRIndexCount;
-	createVAOs(CRVertices, CRIndices, obj);*/
 }
 
 // this actually creates the VAO (structure) and the VBO (vertex data buffer)
@@ -340,90 +317,27 @@ void subDivide() {
 		SubVertices[ind++] = *v1;
 		cout << "ind: " << ind << endl;
 	}*/
-	if (key1Flag) {
-		Vertex* v = new Vertex();
-		fill(begin(SubVertices), end(SubVertices), *v);
-		int subInd = 0;
-		for (int ki = 1; ki <= k && k < 6; ki++) {
-			int n = P[ki].size();
-
-			for (int i = 0; i < n; i++) {
-				Vertex* v1 = new Vertex();
-				v1->SetCoords(new float[4] {P[ki][i].Position[0], P[ki][i].Position[1], 0.0f, 1.0f});
-				v1->SetColor(new float[4] {0.0f, 100.0f, 100.0f, 1.0f});
-
-				SubVertices[subInd++] = *v1;
-				//cout << "ind: " << subInd << endl;
-			}
-		}
-	}
 
 	cout << "k and n : " << k << " " << n << endl;
 }
 
-//void createBB() {
-//	cout << "in CreateBB" << endl;
-//	vector<vector<vector<float>> > C(10, vector<vector<float>>(4));
-//	int bbInd = 0;
-//
-//	for (int i = 0; i < 10; i++) {
-//		C[i][1] = { (2 * Vertices[i].Position[0] + Vertices[(i + 1) % 10].Position[0]) / 3, (2 * Vertices[i].Position[1] + Vertices[(i + 1) % 10].Position[1]) / 3, 0.0f, 1.0f};
-//		C[i][2] = { (Vertices[i].Position[0] + 2 * Vertices[(i + 1) % 10].Position[0]) / 3, (Vertices[i].Position[1] + 2 * Vertices[(i + 1) % 10].Position[1]) / 3, 0.0f, 1.0f};
-//	}
-//
-//	for (int i = 0; i < 10; i++) {
-//		//C[i][0] = { (C[(i - 1 + 10) % 10][2][0] + C[i][1][0]) / 2, (C[(i - 1 + 10) % 10][2][1] + C[i][1][1]) / 2, 0.0f, 1.0f};
-//		C[i][0] = { 0.5f * (Vertices[(i - 1 + 10) % 10].Position[0] + Vertices[(i + 1) % 10].Position[0]) / 3 + (2 * Vertices[i].Position[0] / 3),
-//			0.5f * (Vertices[(i - 1 + 10) % 10].Position[1] + Vertices[(i + 1) % 10].Position[1]) / 3 + (2 * Vertices[i].Position[1] / 3), 0.0f, 1.0f};
-//
-//	}
-//
-//	for (int i = 0; i < 10; i++) {
-//		C[i][3] = { C[(i + 1) % 10][0][0], C[(i + 1) % 10][0][1], 0.0f, 1.0f};
-//	}
-//
-//	if (key2Flag) {
-//		for (int i = 0; i < 10; i++) {
-//			Vertex* v1 = new Vertex(), * v2 = new Vertex(), * v3 = new Vertex(), * v4 = new Vertex();
-//			v1->SetCoords(new float[4] {C[i][0][0], C[i][0][1], 0.0f, 1.0f}), v1->SetColor(new float[4] { 255.0f, 255.0f, 0.0f, 1.0f });
-//			v2->SetCoords(new float[4] {C[i][1][0], C[i][1][1], 0.0f, 1.0f}), v2->SetColor(new float[4] { 255.0f, 255.0f, 0.0f, 1.0f });
-//			v3->SetCoords(new float[4] {C[i][2][0], C[i][2][1], 0.0f, 1.0f}), v3->SetColor(new float[4] { 255.0f, 255.0f, 0.0f, 1.0f });
-//			v4->SetCoords(new float[4] {C[i][3][0], C[i][3][1], 0.0f, 1.0f}), v4->SetColor(new float[4] { 255.0f, 255.0f, 0.0f, 1.0f });
-//			BBVertices[bbInd++] = *v1, BBVertices[bbInd++] = *v2, BBVertices[bbInd++] = *v3, BBVertices[bbInd++] = *v4;
-//		}
-//	}
-//}
+void createBB() {
+	cout << "in CreateBB" << endl;
+	vector<vector<vector<float>> > C(10, vector<vector<float>>(4));
 
-//void createCR() {
-//	cout << "in CreateCR" << endl;
-//	vector<vector<vector<float>> > C(10, vector<vector<float>>(4));
-//	int crInd = 0;
-//
-//	for (int i = 0; i < 10; i++) {
-//		C[i][1] = { (2 * Vertices[i].Position[0] + Vertices[(i + 1) % 10].Position[0]) / 3, (2 * Vertices[i].Position[1] + Vertices[(i + 1) % 10].Position[1]) / 3, 0.0f, 1.0f };
-//		C[i][2] = { (Vertices[i].Position[0] + 2 * Vertices[(i + 1) % 10].Position[0]) / 3, (Vertices[i].Position[1] + 2 * Vertices[(i + 1) % 10].Position[1]) / 3, 0.0f, 1.0f };
-//	}
-//
-//	for (int i = 0; i < 10; i++) {
-//		C[i][0] = { Vertices[i].Position[0], Vertices[i].Position[1], 0.0f, 1.0f};
-//	}
-//
-//	for (int i = 0; i < 10; i++) {
-//		C[i][3] = { Vertices[(i + 1) % 10].Position[0], Vertices[(i + 1) % 10].Position[1], 0.0f, 1.0f };
-//	}
-//
-//	if (key3Flag) {
-//		for (int i = 0; i < 10; i++) {
-//			Vertex* v1 = new Vertex(), * v2 = new Vertex(), * v3 = new Vertex(), * v4 = new Vertex();
-//			v1->SetCoords(new float[4] {C[i][0][0], C[i][0][1], 0.0f, 1.0f}), v1->SetColor(new float[4] { 255.0f, 0.0f, 0.0f, 1.0f });
-//			v2->SetCoords(new float[4] {C[i][1][0], C[i][1][1], 0.0f, 1.0f}), v2->SetColor(new float[4] { 255.0f, 0.0f, 0.0f, 1.0f });
-//			v3->SetCoords(new float[4] {C[i][2][0], C[i][2][1], 0.0f, 1.0f}), v3->SetColor(new float[4] { 255.0f, 0.0f, 0.0f, 1.0f });
-//			v4->SetCoords(new float[4] {C[i][3][0], C[i][3][1], 0.0f, 1.0f}), v4->SetColor(new float[4] { 255.0f, 0.0f, 0.0f, 1.0f });
-//			CRVertices[crInd++] = *v1, CRVertices[crInd++] = *v2, CRVertices[crInd++] = *v3, CRVertices[crInd++] = *v4;
-//		}
-//	}
-//}
-
+	for (int i = 0; i < 10; i++) {
+		C[i][0] = { Vertices[i].Position[0], Vertices[i].Position[1], 0.0f, 1.0f };
+		C[i][1] = { (2 * Vertices[i].Position[0] + Vertices[(i + 1) % 10].Position[0]) / 3, (2 * Vertices[i].Position[1] + Vertices[(i + 1) % 10].Position[1]) / 3, 0.0f, 1.0f};
+		C[i][2] = { (2 * Vertices[i].Position[0] + Vertices[(i + 1) % 10].Position[0]) / 3, (2 * Vertices[i].Position[1] + Vertices[(i + 1) % 10].Position[1]) / 3, 0.0f, 1.0f};
+		C[i][3] = { Vertices[(i + 1) % 10].Position[0], Vertices[(i + 1) % 10].Position[1], 0.0f, 1.0f };
+		Vertex* v1 = new Vertex(), * v2 = new Vertex(), * v3 = new Vertex(), * v4 = new Vertex();
+		v1->SetCoords(new float[4] {C[i][0][0], C[i][0][1], 0.0f, 1.0f}), v1->SetColor(new float[4] { 255.0f, 255.0f, 0.0f, 1.0f });
+		v2->SetCoords(new float[4] {C[i][1][0], C[i][1][1], 0.0f, 1.0f}), v2->SetColor(new float[4] { 255.0f, 255.0f, 0.0f, 1.0f });
+		v3->SetCoords(new float[4] {C[i][2][0], C[i][2][1], 0.0f, 1.0f}), v3->SetColor(new float[4] { 255.0f, 255.0f, 0.0f, 1.0f });
+		v4->SetCoords(new float[4] {C[i][3][0], C[i][3][1], 0.0f, 1.0f}), v4->SetColor(new float[4] { 255.0f, 255.0f, 0.0f, 1.0f });
+		//Vertices[i + 630] = *v1, Vertices[i + 630 + 1] = *v2, Vertices[i + 630 + 2] = *v3, Vertices[i + 630 + 3] = *v4;
+	}
+}
 void createObjects(void) {
 	// ATTN: DERIVE YOUR NEW OBJECTS HERE:  each object has
 	// an array of vertices {pos;color} and
@@ -451,14 +365,6 @@ void createObjects(void) {
 		for (int i = 0; i < SubIndexCount; i++) {
 			SubIndices[i] = i;
 		}
-
-		/*for (int i = 0; i < BBIndexCount; i++) {
-			BBIndices[i] = i;
-		}
-
-		for (int i = 0; i < CRIndexCount; i++) {
-			CRIndices[i] = i;
-		}*/
 
 		for (int i = 0; i < 10; i++) {
 			P[0].push_back(Vertices[i]);
@@ -505,7 +411,7 @@ void createObjects(void) {
 			std::vector<float> P2Pos = { 0.0f, 0.0f, 0.0f, 1.f };
 			std::vector<float> P3Pos = { 0.0f, 0.0f, 0.0f, 1.f };
 
-			//cout << "before index check" << endl;
+			cout << "before index check" << endl;
 
 			P1Pos = { P[k - 1][(i - 1 + n) % n].Position[0], P[k - 1][(i - 1 + n) % n].Position[1], 0.0f, 1.f };
 			P2Pos = { P[k - 1][i].Position[0], P[k - 1][i].Position[1], 0.0f, 1.f };
@@ -526,14 +432,27 @@ void createObjects(void) {
 				SubVertices[subInd++] = *v1;
 				SubVertices[subInd++] = *v2;
 			}*/
-			//cout << "ind: " << ind << endl;
+			cout << "ind: " << ind << endl;
 		}
 	}
 
-	
+	if (key1Flag) {
+		Vertex* v = new Vertex();
+		fill(begin(SubVertices), end(SubVertices), *v);
+		int subInd = 0;
+		for (int ki = 1; ki < k && k < 6; ki++) {
+			int n = P[ki].size();
 
-	//createBB();
-	//createCR();
+			for (int i = 0; i < n; i++) {
+				Vertex* v1 = new Vertex();
+				v1->SetCoords(new float[4] {P[ki][i].Position[0], P[ki][i].Position[1], 0.0f, 1.0f});
+				v1->SetColor(new float[4] {0.0f, 100.0f, 100.0f, 1.0f});
+
+				SubVertices[subInd++] = *v1;
+				cout << "ind: " << subInd << endl;
+			}
+		}
+	}
 	
 
 	// ATTN: Project 1B, Task 1 == create line segments to connect the control points
@@ -640,12 +559,6 @@ void moveVertex(void) {
 	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[1]);
 	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[1], SubVertices, GL_STATIC_DRAW);
 
-	/*glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[2]);
-	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[2], BBVertices, GL_STATIC_DRAW);*/
-
-	/*glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[3]);
-	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[3], CRVertices, GL_STATIC_DRAW);*/
-
 	if (gPickedIndex >= IndexCount) { 
 		// Any number > vertices-indices is background!
 		gMessage = "background";
@@ -689,17 +602,6 @@ void renderScene(void) {
 		glBindVertexArray(VertexArrayId[1]);	// Draw Vertices
 		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[1], SubVertices);		// Update buffer data
 		glDrawElements(GL_POINTS, NumIdcs[1], GL_UNSIGNED_SHORT, (void*)0);
-
-
-		//glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
-		//glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[2], BBVertices);		// Update buffer data
-		//glDrawElements(GL_POINTS, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
-
-		//glBindVertexArray(VertexArrayId[3]);	// Draw Vertices
-		//glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[3], CRVertices);		// Update buffer data
-		//glDrawElements(GL_POINTS, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
-
-		
 
 		// ATTN: Project 1C, Task 2 == Refer to https://learnopengl.com/Getting-started/Transformations and
 		// https://learnopengl.com/Getting-started/Coordinate-Systems - draw all the objects associated with the
@@ -748,12 +650,6 @@ static void mouseCallback(GLFWwindow* window, int button, int action, int mods) 
 
 		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[1]);
 		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[1], SubVertices, GL_STATIC_DRAW);
-
-		/*glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[2]);
-		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[2], BBVertices, GL_STATIC_DRAW);*/
-
-		/*glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[3]);
-		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[3], CRVertices, GL_STATIC_DRAW);*/
 	}
 }
 
@@ -767,17 +663,9 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 	}
 
 	/*if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
-		key2Flag = true;
 		createBB();
-		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[2]);
-		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[2], BBVertices, GL_STATIC_DRAW);
-	}*/
-
-	/*if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
-		key3Flag = true;
-		createCR();
-		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[3]);
-		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[3], CRVertices, GL_STATIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[0]);
+		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[0], Vertices, GL_STATIC_DRAW);
 	}*/
 }
 
