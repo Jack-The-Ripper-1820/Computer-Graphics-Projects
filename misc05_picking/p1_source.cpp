@@ -436,11 +436,11 @@ void createObjects(void) {
 		}
 	}
 
-	if (key1Flag) {
+	if (key1Flag && k < 6) {
 		Vertex* v = new Vertex();
 		fill(begin(SubVertices), end(SubVertices), *v);
 		int subInd = 0;
-		for (int ki = 1; ki < k && k < 6; ki++) {
+		for (int ki = 1; ki <= k && k < 6; ki++) {
 			int n = P[ki].size();
 
 			for (int i = 0; i < n; i++) {
