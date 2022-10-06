@@ -19,6 +19,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 using namespace glm;
+using namespace std;
 
 // Include AntTweakBar
 #include <AntTweakBar.h>
@@ -27,8 +28,6 @@ using namespace glm;
 #include <common/controls.hpp>
 #include <common/objloader.hpp>
 #include <common/vboindexer.hpp>
-
-using namespace std;
 
 
 // ATTN 1A is the general place in the program where you have to change the code base to satisfy a Task of Project 1A.
@@ -122,18 +121,21 @@ size_t NumVerts[NumObjects];	// Useful for glDrawArrays command
 size_t NumIdcs[NumObjects];	// Useful for glDrawElements command
 
 // Initialize ---  global objects -- not elegant but ok for this project
-const size_t IndexCount = 1000;
+const size_t IndexCount = 10;
 Vertex Vertices[IndexCount];
 GLushort Indices[IndexCount];
 Vertex InitVertices[IndexCount];
 
-Vertex subVertices[IndexCount];
+const size_t SubIndexCount = 620;
+Vertex SubVertices[SubIndexCount];
+GLushort SubIndices[SubIndexCount];
 
 // ATTN: DON'T FORGET TO INCREASE THE ARRAY SIZE IN THE PICKING VERTEX SHADER WHEN YOU ADD MORE PICKING COLORS
 float pickingColor[IndexCount];
 
 bool initFlag = true;
 std::vector<std::vector<Vertex>> P, InitP;
+bool key1Flag = false;
 
 
 int initWindow(void) {
@@ -233,8 +235,14 @@ void initOpenGL(void) {
 	VertexBufferSize[obj] = sizeof(Vertices);
 	IndexBufferSize[obj] = sizeof(Indices);
 	NumIdcs[obj] = IndexCount;
-
 	createVAOs(Vertices, Indices, obj);
+
+	obj++;
+
+	VertexBufferSize[obj] = sizeof(SubVertices);
+	IndexBufferSize[obj] = sizeof(SubIndices);
+	NumIdcs[obj] = SubIndexCount;
+	createVAOs(SubVertices, SubIndices, obj);
 }
 
 // this actually creates the VAO (structure) and the VBO (vertex data buffer)
@@ -281,24 +289,24 @@ void createVAOs(Vertex Vertices[], GLushort Indices[], int ObjectId) {
 }
 
 int k = 0;
-int ind = 10;
+int ind = 0;
 
 void subDivide() {
 	k++;
 	cout << "k after increment: " << k << endl;
 	if (k > 5) {
 		k = 0;
-		for (int i = 0; i < IndexCount; i++) {
-			Vertices[i] = InitVertices[i];
-			cout << InitVertices[i].Position << endl;
-		}
-		ind = 10;
+		Vertex* v = new Vertex();
+		fill(begin(SubVertices), end(SubVertices), *v);
+		ind = 0;
 		P = InitP;
+		cout << "in k > 5" << endl;
+		key1Flag = false;
 		return;
 	}
 
 	int n = P[k - 1].size();
-
+	
 	for (int i = 0; i < n; i++) {
 		std::vector<float> P1Pos = { 0.0f, 0.0f, 0.0f, 1.f };
 		std::vector<float> P2Pos = { 0.0f, 0.0f, 0.0f, 1.f };
@@ -318,13 +326,11 @@ void subDivide() {
 		v2->SetColor(new float[4] {0.0f, 100.0f, 100.0f, 1.0f});
 
 
-		P[k].push_back(*v1);
-		P[k].push_back(*v2);
+		/*P[k].push_back(*v1);
+		P[k].push_back(*v2);*/
 
-		Vertices[ind++] = *v1;
-		Vertices[ind++] = *v2;
-		/*subVertices[ind++] = *v1;
-		subVertices[ind++] = *v2;*/
+		SubVertices[ind++] = *v1;
+		SubVertices[ind++] = *v2;
 		cout << "ind: " << ind << endl;
 	}
 
@@ -367,41 +373,20 @@ void createObjects(void) {
 		Vertices[7].SetCoords(new float[4] {0.501f, -1.541f, 0.0f, 1.0f});
 		Vertices[8].SetCoords(new float[4] {-0.501f, -1.541f, 0.0f, 1.0f});
 		Vertices[9].SetCoords(new float[4] {-0.809f, -0.588f, 0.0f, 1.0f});
-		InitVertices[0].SetCoords(new float[4] {0, 0.0f, 0.0f, 1.0f});
-		InitVertices[1].SetCoords(new float[4] {0.809f, 0.588f, 0.0f, 1.0f});
-		InitVertices[2].SetCoords(new float[4] {0.501f, 1.541f, 0.0f, 1.0f});
-		InitVertices[3].SetCoords(new float[4] {-0.501f, 1.541f, 0.0f, 1.0f});
-		InitVertices[4].SetCoords(new float[4] {-0.809f, 0.588f, 0.0f, 1.0f});
-		InitVertices[5].SetCoords(new float[4] {0, 0.0f, 0.0f, 1.0f});
-		InitVertices[6].SetCoords(new float[4] {0.809f, -0.588f, 0.0f, 1.0f});
-		InitVertices[7].SetCoords(new float[4] {0.501f, -1.541f, 0.0f, 1.0f});
-		InitVertices[8].SetCoords(new float[4] {-0.501f, -1.541f, 0.0f, 1.0f});
-		InitVertices[9].SetCoords(new float[4] {-0.809f, -0.588f, 0.0f, 1.0f});
 		P.resize(6);
-
-		for (int i = 0; i < 10; i++) {
-			P[0].push_back(Vertices[i]);
-		}
-
-		//P[1] = P[2] = P[3] = P[4] = P[0];
-		InitP = P;
 
 		for (int i = 0; i < IndexCount; i++) {
 			Indices[i] = i;
 		}
 
-		InitVertices[0].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
-		InitVertices[1].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
-		InitVertices[2].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
-		InitVertices[3].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
-		InitVertices[4].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
-		InitVertices[5].SetColor(new float[4] { 1.0f, 1.0f, 0.0f, 1.0f });
-		InitVertices[6].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
-		InitVertices[7].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
-		InitVertices[8].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
-		InitVertices[9].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
+		for (int i = 0; i < SubIndexCount; i++) {
+			SubIndices[i] = i;
+		}
 
-		//subDivide();
+		for (int i = 0; i < 10; i++) {
+			P[0].push_back(Vertices[i]);
+		}
+		InitP = P;
 
 		/*for (int i = 0; i < IndexCount; i++)
 		{
@@ -414,7 +399,6 @@ void createObjects(void) {
 		}*/
 
 		initFlag = false;
-		
 	}
 
 	Vertices[0].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
@@ -429,6 +413,47 @@ void createObjects(void) {
 	Vertices[9].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
 
 
+	
+	P[0] = vector<Vertex>();
+	for (int i = 0; i < 10; i++) {
+		P[0].push_back(Vertices[i]);
+	}
+
+	int subInd = 0;
+
+	for (int k = 1; k < 6; k++) {
+		int n = P[k - 1].size();
+		P[k] = vector<Vertex>();
+
+		for (int i = 0; i < n; i++) {
+			std::vector<float> P1Pos = { 0.0f, 0.0f, 0.0f, 1.f };
+			std::vector<float> P2Pos = { 0.0f, 0.0f, 0.0f, 1.f };
+			std::vector<float> P3Pos = { 0.0f, 0.0f, 0.0f, 1.f };
+
+			cout << "before index check" << endl;
+
+			P1Pos = { P[k - 1][(i - 1 + n) % n].Position[0], P[k - 1][(i - 1 + n) % n].Position[1], 0.0f, 1.f };
+			P2Pos = { P[k - 1][i].Position[0], P[k - 1][i].Position[1], 0.0f, 1.f };
+			P3Pos = { P[k - 1][(i + 1) % n].Position[0], P[k - 1][(i + 1) % n].Position[1], 0.0f, 1.f };
+
+
+			Vertex* v1 = new Vertex(), * v2 = new Vertex();
+			v1->SetCoords(new float[4] { 0.5f * (P1Pos[0] + P2Pos[0]), 0.5f * (P1Pos[1] + P2Pos[1]), 0.0f, 1.0f});
+			v1->SetColor(new float[4] {0.0f, 100.0f, 100.0f, 1.0f});
+			v2->SetCoords(new float[4] { (P1Pos[0] + 6 * P2Pos[0] + P3Pos[0]) / 8, (P1Pos[1] + 6 * P2Pos[1] + P3Pos[1]) / 8, 0.0f, 1.0f});
+			v2->SetColor(new float[4] {0.0f, 100.0f, 100.0f, 1.0f});
+
+
+			P[k].push_back(*v1);
+			P[k].push_back(*v2);
+
+			if (key1Flag) {
+				SubVertices[subInd++] = *v1;
+				SubVertices[subInd++] = *v2;
+			}
+			cout << "ind: " << ind << endl;
+		}
+	}
 	
 
 	// ATTN: Project 1B, Task 1 == create line segments to connect the control points
@@ -532,6 +557,9 @@ void moveVertex(void) {
 	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[0]);
 	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[0], Vertices, GL_STATIC_DRAW);
 
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[1]);
+	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[1], SubVertices, GL_STATIC_DRAW);
+
 	if (gPickedIndex >= IndexCount) { 
 		// Any number > vertices-indices is background!
 		gMessage = "background";
@@ -539,6 +567,7 @@ void moveVertex(void) {
 	else {
 		std::ostringstream oss;
 		oss << "point " << gPickedIndex;
+
 		gMessage = oss.str();
 	}
 
@@ -571,6 +600,9 @@ void renderScene(void) {
 		// ATTN: OTHER BINDING AND DRAWING COMMANDS GO HERE
 		// one set per object:
 		// glBindVertexArray(VertexArrayId[<x>]); etc etc
+		glBindVertexArray(VertexArrayId[1]);	// Draw Vertices
+		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[1], SubVertices);		// Update buffer data
+		glDrawElements(GL_POINTS, NumIdcs[1], GL_UNSIGNED_SHORT, (void*)0);
 
 		// ATTN: Project 1C, Task 2 == Refer to https://learnopengl.com/Getting-started/Transformations and
 		// https://learnopengl.com/Getting-started/Coordinate-Systems - draw all the objects associated with the
@@ -605,6 +637,9 @@ void cleanup(void) {
 static void mouseCallback(GLFWwindow* window, int button, int action, int mods) {
 	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
 		pickVertex();
+
+		/*glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[0]);
+		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[0], Vertices, GL_STATIC_DRAW);*/
 	}
 
 	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
@@ -613,6 +648,9 @@ static void mouseCallback(GLFWwindow* window, int button, int action, int mods) 
 
 		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[0]);
 		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[0], Vertices, GL_STATIC_DRAW);
+
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[1]);
+		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[1], SubVertices, GL_STATIC_DRAW);
 	}
 }
 
@@ -620,15 +658,16 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 {
 	if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
 		subDivide();
-		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[0]);
-		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[0], Vertices, GL_STATIC_DRAW);
+		key1Flag = true;
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[1]);
+		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[1], SubVertices, GL_STATIC_DRAW);
 	}
 
-	if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
+	/*if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
 		createBB();
 		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[0]);
 		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[0], Vertices, GL_STATIC_DRAW);
-	}
+	}*/
 }
 
 int main(void) {
