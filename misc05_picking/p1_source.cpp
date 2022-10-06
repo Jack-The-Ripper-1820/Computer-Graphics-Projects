@@ -122,7 +122,7 @@ size_t NumVerts[NumObjects];	// Useful for glDrawArrays command
 size_t NumIdcs[NumObjects];	// Useful for glDrawElements command
 
 // Initialize ---  global objects -- not elegant but ok for this project
-const size_t IndexCount = 630;
+const size_t IndexCount = 1000;
 Vertex Vertices[IndexCount];
 GLushort Indices[IndexCount];
 Vertex InitVertices[IndexCount];
@@ -325,13 +325,30 @@ void subDivide() {
 
 		Vertices[ind++] = *v1;
 		Vertices[ind++] = *v2;
+		cout << "ind: " << ind << endl;
 	}
 
 	n = P[k].size();
 	cout << "k and n : " << k << " " << n << endl;
 }
 
+void createBB() {
+	cout << "in CreateBB" << endl;
+	vector<vector<vector<float>> > C(10, vector<vector<float>>(4));
 
+	for (int i = 0; i < 10; i++) {
+		C[i][0] = { Vertices[i].Position[0], Vertices[i].Position[1], 0.0f, 1.0f };
+		C[i][1] = { (2 * Vertices[i].Position[0] + Vertices[(i + 1) % 10].Position[0]) / 3, (2 * Vertices[i].Position[1] + Vertices[(i + 1) % 10].Position[1]) / 3, 0.0f, 1.0f};
+		C[i][2] = { (2 * Vertices[i].Position[0] + Vertices[(i + 1) % 10].Position[0]) / 3, (2 * Vertices[i].Position[1] + Vertices[(i + 1) % 10].Position[1]) / 3, 0.0f, 1.0f};
+		C[i][3] = { Vertices[(i + 1) % 10].Position[0], Vertices[(i + 1) % 10].Position[1], 0.0f, 1.0f };
+		Vertex* v1 = new Vertex(), * v2 = new Vertex(), * v3 = new Vertex(), * v4 = new Vertex();
+		v1->SetCoords(new float[4] {C[i][0][0], C[i][0][1], 0.0f, 1.0f}), v1->SetColor(new float[4] { 255.0f, 255.0f, 0.0f, 1.0f });
+		v2->SetCoords(new float[4] {C[i][1][0], C[i][1][1], 0.0f, 1.0f}), v2->SetColor(new float[4] { 255.0f, 255.0f, 0.0f, 1.0f });
+		v3->SetCoords(new float[4] {C[i][2][0], C[i][2][1], 0.0f, 1.0f}), v3->SetColor(new float[4] { 255.0f, 255.0f, 0.0f, 1.0f });
+		v4->SetCoords(new float[4] {C[i][3][0], C[i][3][1], 0.0f, 1.0f}), v4->SetColor(new float[4] { 255.0f, 255.0f, 0.0f, 1.0f });
+		Vertices[i + 630] = *v1, Vertices[i + 630 + 1] = *v2, Vertices[i + 630 + 2] = *v3, Vertices[i + 630 + 3] = *v4;
+	}
+}
 void createObjects(void) {
 	// ATTN: DERIVE YOUR NEW OBJECTS HERE:  each object has
 	// an array of vertices {pos;color} and
@@ -606,8 +623,12 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[0]);
 		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[0], Vertices, GL_STATIC_DRAW);
 	}
-	
-	//if(key == GLFW_KEY_)
+
+	if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
+		createBB();
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[0]);
+		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[0], Vertices, GL_STATIC_DRAW);
+	}
 }
 
 int main(void) {
