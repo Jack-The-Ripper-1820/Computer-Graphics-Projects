@@ -84,6 +84,7 @@ void moveVertex(void);
 void renderScene(void);
 void cleanup(void);
 static void mouseCallback(GLFWwindow*, int, int, int);
+static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 // GLOBAL VARIABLES
 GLFWwindow* window;
@@ -179,6 +180,7 @@ int initWindow(void) {
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_FALSE);
 	glfwSetCursorPos(window, window_width / 2, window_height / 2);
 	glfwSetMouseButtonCallback(window, mouseCallback);
+	glfwSetKeyCallback(window, key_callback);
 
 	return 0;
 }
@@ -447,10 +449,10 @@ void createObjects(void) {
 			P[k].push_back(*v1);
 			P[k].push_back(*v2);
 
-			if (key1Flag) {
+			/*if (key1Flag) {
 				SubVertices[subInd++] = *v1;
 				SubVertices[subInd++] = *v2;
-			}
+			}*/
 			cout << "ind: " << ind << endl;
 		}
 	}
@@ -684,7 +686,6 @@ int main(void) {
 
 	// Initialize OpenGL pipeline
 	initOpenGL();
-	glfwSetKeyCallback(window, key_callback);
 
 	double lastTime = glfwGetTime();
 	int nbFrames = 0;
