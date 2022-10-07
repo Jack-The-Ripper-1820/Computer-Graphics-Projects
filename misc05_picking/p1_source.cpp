@@ -346,7 +346,7 @@ void subDivide() {
 }
 
 void createBB() {
-	cout << "in CreateBB" << endl;
+	//cout << "in CreateBB" << endl;
 	vector<vector<vector<float>> > C(10, vector<vector<float>>(4));
 	int bbInd = 0;
 
@@ -379,22 +379,23 @@ void createBB() {
 }
 
 void createCR() {
-	cout << "in CreateCR" << endl;
+	//cout << "in CreateCR" << endl;
 	vector<vector<vector<float>> > C(10, vector<vector<float>>(4));
 	int crInd = 0;
-
 	for (int i = 0; i < 10; i++) {
-		C[i][1] = { (2 * Vertices[i].Position[0] + Vertices[(i + 1) % 10].Position[0]) / 3, (2 * Vertices[i].Position[1] + Vertices[(i + 1) % 10].Position[1]) / 3, 0.0f, 1.0f };
-		C[i][2] = { (Vertices[i].Position[0] + 2 * Vertices[(i + 1) % 10].Position[0]) / 3, (Vertices[i].Position[1] + 2 * Vertices[(i + 1) % 10].Position[1]) / 3, 0.0f, 1.0f };
-	}
-
-	for (int i = 0; i < 10; i++) {
-		C[i][0] = { Vertices[i].Position[0], Vertices[i].Position[1], 0.0f, 1.0f};
+		C[i][0] = { Vertices[i].Position[0], Vertices[i].Position[1], 0.0f, 1.0f };
 	}
 
 	for (int i = 0; i < 10; i++) {
 		C[i][3] = { Vertices[(i + 1) % 10].Position[0], Vertices[(i + 1) % 10].Position[1], 0.0f, 1.0f };
 	}
+
+	for (int i = 0; i < 10; i++) {
+		C[i][1] = { Vertices[i].Position[0] + 0.625f * (Vertices[(i + 1) % 10].Position[0] - Vertices[(i - 1 + 10) % 10].Position[0]) / 3, Vertices[i].Position[1] + 0.625f * (Vertices[(i + 1) % 10].Position[1] - Vertices[(i - 1 + 10) % 10].Position[1]) / 3, 0.0f, 1.0f};
+		C[(i - 1 + 10) % 10][2] = { Vertices[i].Position[0] - 0.625f * (Vertices[(i + 1) % 10].Position[0] - Vertices[(i - 1 + 10) % 10].Position[0]) / 3, Vertices[i].Position[1] - 0.625f * (Vertices[(i + 1) % 10].Position[1] - Vertices[(i - 1 + 10) % 10].Position[1]) / 3, 0.0f, 1.0f };
+	}
+
+	
 
 	if (key3Flag) {
 		for (int i = 0; i < 10; i++) {
@@ -406,6 +407,18 @@ void createCR() {
 			CRVertices[crInd++] = *v1, CRVertices[crInd++] = *v2, CRVertices[crInd++] = *v3, CRVertices[crInd++] = *v4;
 		}
 	}
+
+	/*for i = 0 : n, p(n − i, i) ← cn−i, i ...fill array
+		for l = 1 : n, ...for each level
+			for i = 0 : n − l, ...from left to right
+				p(n − l − i, i) = (1 − x) p(n − l + 1 − i, i)
+				+ x p(n − l − i, i + 1)
+				end
+				end
+				pn(x) ← p(0, 0).*/
+
+
+
 }
 
 void createObjects(void) {
@@ -490,7 +503,7 @@ void createObjects(void) {
 			std::vector<float> P2Pos = { 0.0f, 0.0f, 0.0f, 1.f };
 			std::vector<float> P3Pos = { 0.0f, 0.0f, 0.0f, 1.f };
 
-			cout << "before index check" << endl;
+			//cout << "before index check" << endl;
 
 			P1Pos = { P[k - 1][(i - 1 + n) % n].Position[0], P[k - 1][(i - 1 + n) % n].Position[1], 0.0f, 1.f };
 			P2Pos = { P[k - 1][i].Position[0], P[k - 1][i].Position[1], 0.0f, 1.f };
@@ -511,7 +524,7 @@ void createObjects(void) {
 				SubVertices[subInd++] = *v1;
 				SubVertices[subInd++] = *v2;
 			}*/
-			cout << "ind: " << ind << endl;
+			//cout << "ind: " << ind << endl;
 		}
 	}
 
@@ -528,7 +541,7 @@ void createObjects(void) {
 				v1->SetColor(new float[4] {0.0f, 100.0f, 100.0f, 1.0f});
 
 				SubVertices[subInd++] = *v1;
-				cout << "ind: " << subInd << endl;
+				//cout << "ind: " << subInd << endl;
 			}
 		}
 	}
@@ -682,6 +695,7 @@ void renderScene(void) {
 		glBindVertexArray(VertexArrayId[0]);	// Draw Vertices
 		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[0], Vertices);		// Update buffer data
 		glDrawElements(GL_POINTS, NumIdcs[0], GL_UNSIGNED_SHORT, (void*)0);
+		//glDrawElements(GL_LINES, NumIdcs[0], GL_UNSIGNED_SHORT, (void*)0);
 		// // If don't use indices
 		// glDrawArrays(GL_POINTS, 0, NumVerts[0]);	
 
@@ -691,6 +705,8 @@ void renderScene(void) {
 		glBindVertexArray(VertexArrayId[1]);	// Draw Vertices
 		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[1], SubVertices);		// Update buffer data
 		glDrawElements(GL_POINTS, NumIdcs[1], GL_UNSIGNED_SHORT, (void*)0);
+		//glDrawElements(GL_LINES, NumIdcs[1], GL_UNSIGNED_SHORT, (void*)0);
+
 
 		glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
 		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[2], BBVertices);		// Update buffer data
@@ -700,7 +716,29 @@ void renderScene(void) {
 		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[3], CRVertices);		// Update buffer data
 		glDrawElements(GL_POINTS, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
 
+		//glBindVertexArray(VertexArrayId[3]);	// Draw Vertices
+		//glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[3], CRVertices);		// Update buffer data
+		/*glDrawElements(GL_LINES, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);*/
 
+		if (key3Flag) {
+			cout << "inside lines" << endl;
+			glDrawElements(GL_LINE_LOOP, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
+			/*GLfloat LineVertices[6 * CRIndexCount];
+			int ind = 0;
+			cout << "inside lines" << endl;
+
+			for (int i = 0; i < CRIndexCount; i++) {
+				LineVertices[ind++] = CRVertices[i].Position[0];
+				LineVertices[ind++] = CRVertices[i].Position[1];
+				LineVertices[ind++] = CRVertices[i].Position[2];
+				LineVertices[ind++] = CRVertices[i].Position[0];
+				LineVertices[ind++] = CRVertices[i].Position[1];
+				LineVertices[ind++] = CRVertices[i].Position[2];
+			}
+
+			glVertexPointer(3, GL_FLOAT, 0, LineVertices);
+			glDrawArrays(GL_LINES, 0, CRIndexCount * 2);*/
+		}
 
 		// ATTN: Project 1C, Task 2 == Refer to https://learnopengl.com/Getting-started/Transformations and
 		// https://learnopengl.com/Getting-started/Coordinate-Systems - draw all the objects associated with the
