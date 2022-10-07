@@ -147,7 +147,7 @@ GLushort CurveIndices[CurveIndexCount];
 float pickingColor[IndexCount];
 
 bool initFlag = true;
-std::vector<std::vector<Vertex>> P, InitP;
+std::vector<std::vector<Vertex>> P;
 bool key1Flag = false;
 bool key2Flag = false;
 bool key3Flag = false;
@@ -336,7 +336,6 @@ void subDivide() {
 		Vertex* v = new Vertex();
 		fill(begin(SubVertices), end(SubVertices), *v);
 		ind = 0;
-		//P = InitP;
 		//cout << "in k > 5" << endl;
 		key1Flag = false;
 		return;
@@ -480,7 +479,6 @@ void createObjects(void) {
 		for (int i = 0; i < 10; i++) {
 			P[0].push_back(Vertices[i]);
 		}
-		//InitP = P;
 
 		/*for (int i = 0; i < IndexCount; i++)
 		{
