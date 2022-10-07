@@ -109,7 +109,7 @@ GLuint gPickedIndex;
 std::string gMessage;
 
 // ATTN: INCREASE THIS NUMBER AS YOU CREATE NEW OBJECTS
-const GLuint NumObjects = 4; // Number of objects types in the scene
+const GLuint NumObjects = 5; // Number of objects types in the scene
 
 // Keeps track of IDs associated with each object
 GLuint VertexArrayId[NumObjects];
@@ -138,6 +138,10 @@ GLushort BBIndices[BBIndexCount];
 const size_t CRIndexCount = 40;
 Vertex CRVertices[CRIndexCount];
 GLushort CRIndices[CRIndexCount];
+
+const size_t CurveIndexCount = 1000;
+Vertex CurveVertices[CurveIndexCount];
+GLushort CurveIndices[CurveIndexCount];
 
 // ATTN: DON'T FORGET TO INCREASE THE ARRAY SIZE IN THE PICKING VERTEX SHADER WHEN YOU ADD MORE PICKING COLORS
 float pickingColor[IndexCount];
@@ -269,6 +273,13 @@ void initOpenGL(void) {
 	IndexBufferSize[obj] = sizeof(CRIndices);
 	NumIdcs[obj] = CRIndexCount;
 	createVAOs(CRVertices, CRIndices, obj);
+
+	obj++;
+
+	VertexBufferSize[obj] = sizeof(CurveVertices);
+	IndexBufferSize[obj] = sizeof(CurveIndices);
+	NumIdcs[obj] = CurveIndexCount;
+	createVAOs(CurveVertices, CurveIndices, obj);
 }
 
 // this actually creates the VAO (structure) and the VBO (vertex data buffer)
@@ -395,8 +406,6 @@ void createCR() {
 		C[(i - 1 + 10) % 10][2] = { Vertices[i].Position[0] - 0.625f * (Vertices[(i + 1) % 10].Position[0] - Vertices[(i - 1 + 10) % 10].Position[0]) / 3, Vertices[i].Position[1] - 0.625f * (Vertices[(i + 1) % 10].Position[1] - Vertices[(i - 1 + 10) % 10].Position[1]) / 3, 0.0f, 1.0f };
 	}
 
-	
-
 	if (key3Flag) {
 		for (int i = 0; i < 10; i++) {
 			Vertex* v1 = new Vertex(), * v2 = new Vertex(), * v3 = new Vertex(), * v4 = new Vertex();
@@ -405,6 +414,31 @@ void createCR() {
 			v3->SetCoords(new float[4] {C[i][2][0], C[i][2][1], 0.0f, 1.0f}), v3->SetColor(new float[4] { 255.0f, 0.0f, 0.0f, 1.0f });
 			v4->SetCoords(new float[4] {C[i][3][0], C[i][3][1], 0.0f, 1.0f}), v4->SetColor(new float[4] { 255.0f, 0.0f, 0.0f, 1.0f });
 			CRVertices[crInd++] = *v1, CRVertices[crInd++] = *v2, CRVertices[crInd++] = *v3, CRVertices[crInd++] = *v4;
+		}
+
+		vector<vector<float>> Points;
+		for (auto& a : C) {
+			for (auto& b : a) {
+				Points.push_back(b);
+			}
+		}
+
+		int n = Points.size(), cInd = 0;
+
+		for (int pi = 0; pi < n; pi++) {
+			vector<vector<float>> p = { Points[pi], Points[(pi + 1) % n], Points[(pi + 2) % n], Points[(pi + 3) % n] }, q = p;
+
+			for (float t = 0.0f; t <= 1.0f; t += 0.05882352941f) {
+				for (int k = 1; k < 4; k++) {
+					for (int i = 0; i < 4 - k; i++) {
+						q[i][0] = (1 - t) * q[i][0] + t * q[i + 1][0];
+						q[i][1] = (1 - t) * q[i][1] + t * q[i + 1][1];
+					}
+				}
+
+				CurveVertices[cInd].SetCoords(new float[4] { q[0][0], q[0][1], 0.0f, 1.0f });
+				CurveVertices[cInd++].SetColor(new float[4] { 0.0f, 255.0f, 0.0f, 1.0f });
+			}
 		}
 	}
 
@@ -416,9 +450,6 @@ void createCR() {
 				end
 				end
 				pn(x) ← p(0, 0).*/
-
-
-
 }
 
 void createObjects(void) {
@@ -458,6 +489,10 @@ void createObjects(void) {
 			CRIndices[i] = i;
 		}
 
+		for (int i = 0; i < CurveIndexCount; i++) {
+			CurveIndices[i] = i;
+		}
+
 		for (int i = 0; i < 10; i++) {
 			P[0].push_back(Vertices[i]);
 		}
@@ -487,11 +522,8 @@ void createObjects(void) {
 	Vertices[8].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
 	Vertices[9].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
 
-
-	
-	P[0] = vector<Vertex>();
-	for (int i = 0; i < 10; i++) {
-		P[0].push_back(Vertices[i]);
+	for (int i = 0; i < IndexCount; i++) {
+		P[0][i] = Vertices[i];
 	}
 
 	for (int k = 1; k < 6; k++) {
@@ -660,6 +692,9 @@ void moveVertex(void) {
 	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[3]);
 	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[3], CRVertices, GL_STATIC_DRAW);
 
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[4]);
+	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[4], CurveVertices, GL_STATIC_DRAW);
+
 
 	if (gPickedIndex >= IndexCount) { 
 		// Any number > vertices-indices is background!
@@ -705,8 +740,6 @@ void renderScene(void) {
 		glBindVertexArray(VertexArrayId[1]);	// Draw Vertices
 		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[1], SubVertices);		// Update buffer data
 		glDrawElements(GL_POINTS, NumIdcs[1], GL_UNSIGNED_SHORT, (void*)0);
-		//glDrawElements(GL_LINES, NumIdcs[1], GL_UNSIGNED_SHORT, (void*)0);
-
 
 		glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
 		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[2], BBVertices);		// Update buffer data
@@ -715,29 +748,16 @@ void renderScene(void) {
 		glBindVertexArray(VertexArrayId[3]);	// Draw Vertices
 		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[3], CRVertices);		// Update buffer data
 		glDrawElements(GL_POINTS, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
-
-		//glBindVertexArray(VertexArrayId[3]);	// Draw Vertices
-		//glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[3], CRVertices);		// Update buffer data
-		/*glDrawElements(GL_LINES, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);*/
-
 		if (key3Flag) {
-			cout << "inside lines" << endl;
 			glDrawElements(GL_LINE_LOOP, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
-			/*GLfloat LineVertices[6 * CRIndexCount];
-			int ind = 0;
-			cout << "inside lines" << endl;
+		}
 
-			for (int i = 0; i < CRIndexCount; i++) {
-				LineVertices[ind++] = CRVertices[i].Position[0];
-				LineVertices[ind++] = CRVertices[i].Position[1];
-				LineVertices[ind++] = CRVertices[i].Position[2];
-				LineVertices[ind++] = CRVertices[i].Position[0];
-				LineVertices[ind++] = CRVertices[i].Position[1];
-				LineVertices[ind++] = CRVertices[i].Position[2];
-			}
-
-			glVertexPointer(3, GL_FLOAT, 0, LineVertices);
-			glDrawArrays(GL_LINES, 0, CRIndexCount * 2);*/
+		glBindVertexArray(VertexArrayId[4]);	// Draw Vertices
+		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[4], CurveVertices);		// Update buffer data
+		
+		if (key3Flag) {
+			//cout << "inside lines" << endl;	
+			glDrawElements(GL_LINE_LOOP, NumIdcs[4], GL_UNSIGNED_SHORT, (void*)0);
 		}
 
 		// ATTN: Project 1C, Task 2 == Refer to https://learnopengl.com/Getting-started/Transformations and
@@ -793,6 +813,9 @@ static void mouseCallback(GLFWwindow* window, int button, int action, int mods) 
 
 		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[3]);
 		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[3], CRVertices, GL_STATIC_DRAW);
+
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[4]);
+		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[4], CurveVertices, GL_STATIC_DRAW);
 	}
 }
 
@@ -818,6 +841,9 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 		createCR();
 		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[3]);
 		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[3], CRVertices, GL_STATIC_DRAW);
+
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[4]);
+		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[4], CurveVertices, GL_STATIC_DRAW);
 	}
 }
 
