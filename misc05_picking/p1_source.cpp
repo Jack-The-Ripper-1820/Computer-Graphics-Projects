@@ -111,7 +111,7 @@ GLuint gPickedIndex;
 std::string gMessage;
 
 // ATTN: INCREASE THIS NUMBER AS YOU CREATE NEW OBJECTS
-const GLuint NumObjects = 8; // Number of objects types in the scene
+const GLuint NumObjects = 12; // Number of objects types in the scene
 
 // Keeps track of IDs associated with each object
 GLuint VertexArrayId[NumObjects];
@@ -141,13 +141,25 @@ const size_t CRIndexCount = 40;
 Vertex CRVertices[CRIndexCount];
 GLushort CRIndices[CRIndexCount];
 
-const size_t CurveIndexCount = 18*3*40 + 1;
+const size_t CurveIndexCount = 101*3*40 + 1;
 Vertex CurveVertices[CurveIndexCount];
 GLushort CurveIndices[CurveIndexCount];
 
-Vertex YZVertices[IndexCount];
-Vertex YZCurveVertices[CurveIndexCount];
-Vertex YZCRVertices[CRIndexCount];
+Vertex ZYVertices[IndexCount];
+Vertex ZYCurveVertices[CurveIndexCount];
+Vertex ZYCRVertices[CRIndexCount];
+
+const size_t TriangleIndexCount = 3;
+Vertex TriangleVertices[TriangleIndexCount];
+GLushort TriangleIndices[TriangleIndexCount];
+
+Vertex ZYTriangleVertices[TriangleIndexCount];
+
+const size_t TNBIndexCount = 6;
+Vertex TNBVertices[TNBIndexCount];
+GLushort  TNBIndices[TNBIndexCount];
+
+Vertex ZYTNBVertices[TNBIndexCount];
 
 // ATTN: DON'T FORGET TO INCREASE THE ARRAY SIZE IN THE PICKING VERTEX SHADER WHEN YOU ADD MORE PICKING COLORS
 float pickingColor[IndexCount];
@@ -159,6 +171,8 @@ bool key2Flag = false;
 bool key3Flag = false;
 bool shiftFlag = false;
 bool key4Flag = false;
+bool key5Flag = false;
+float T = 0.01;
 
 //float prevY[IndexCount];
 
@@ -310,25 +324,52 @@ void initOpenGL(void) {
 
 	obj++;
 
-	VertexBufferSize[obj] = sizeof(YZVertices);
+	VertexBufferSize[obj] = sizeof(ZYVertices);
 	IndexBufferSize[obj] = sizeof(Indices);
 	NumIdcs[obj] = IndexCount;
-	createVAOs(YZVertices, Indices, obj);
+	createVAOs(ZYVertices, Indices, obj);
 
 	obj++;
 
-	VertexBufferSize[obj] = sizeof(YZCRVertices);
+	VertexBufferSize[obj] = sizeof(ZYCRVertices);
 	IndexBufferSize[obj] = sizeof(CRIndices);
 	NumIdcs[obj] = CRIndexCount;
-	createVAOs(YZCRVertices, CRIndices, obj);
+	createVAOs(ZYCRVertices, CRIndices, obj);
 
 	obj++;
 
-	VertexBufferSize[obj] = sizeof(YZCurveVertices);
+	VertexBufferSize[obj] = sizeof(ZYCurveVertices);
 	IndexBufferSize[obj] = sizeof(CurveIndices);
 	NumIdcs[obj] = CurveIndexCount;
-	createVAOs(YZCurveVertices, CurveIndices, obj);
+	createVAOs(ZYCurveVertices, CurveIndices, obj);
 
+	obj++;
+
+	VertexBufferSize[obj] = sizeof(TriangleVertices);
+	IndexBufferSize[obj] = sizeof(TriangleIndices);
+	NumIdcs[obj] = TriangleIndexCount;
+	createVAOs(TriangleVertices, TriangleIndices, obj);
+
+	obj++;
+
+	VertexBufferSize[obj] = sizeof(ZYTriangleVertices);
+	IndexBufferSize[obj] = sizeof(TriangleIndices);
+	NumIdcs[obj] = TriangleIndexCount;
+	createVAOs(ZYTriangleVertices, TriangleIndices, obj);
+
+	obj++;
+
+	VertexBufferSize[obj] = sizeof(TNBVertices);
+	IndexBufferSize[obj] = sizeof(TNBIndices);
+	NumIdcs[obj] = TNBIndexCount;
+	createVAOs(TNBVertices, TNBIndices, obj);
+
+	obj++;
+
+	VertexBufferSize[obj] = sizeof(ZYTNBVertices);
+	IndexBufferSize[obj] = sizeof(TNBIndices);
+	NumIdcs[obj] = TNBIndexCount;
+	createVAOs(ZYTNBVertices, TNBIndices, obj);
 	
 }
 
@@ -392,15 +433,25 @@ void bindBuffers() {
 	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[4], CurveVertices, GL_STATIC_DRAW);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[5]);
-	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[5], YZVertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[5], ZYVertices, GL_STATIC_DRAW);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[6]);
-	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[6], YZCRVertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[6], ZYCRVertices, GL_STATIC_DRAW);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[7]);
-	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[7], YZCurveVertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[7], ZYCurveVertices, GL_STATIC_DRAW);
 
-	
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[8]);
+	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[8], TriangleVertices, GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[9]);
+	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[9], ZYTriangleVertices, GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[10]);
+	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[10], TNBVertices, GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[11]);
+	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[11], ZYTNBVertices, GL_STATIC_DRAW);
 }
 
 int k = 0;
@@ -495,8 +546,8 @@ void createCR() {
 
 		for (int pi = 0; pi < IndexCount; pi++) {
 			vector<vector<float>> p = { C[pi][0], C[pi][1], C[pi][2], C[pi][3]}, q = p;
-
-			for (float t = 0.0f; t <= 1.0f; t += 0.05882352941f) {
+			//0.05882352941f
+			for (float t = T; t <= 1.0f; t += T) {
 				for (int k = 1; k < 4; k++) {
 					for (int i = 0; i < 4 - k; i++) {
 						q[i][0] = (1 - t) * q[i][0] + t * q[i + 1][0];
@@ -512,23 +563,23 @@ void createCR() {
 	}
 }
 
-void createYZCR() {
+void createZYCR() {
 	//cout << "in CreateCR" << endl;
 	vector<vector<vector<float>> > C(IndexCount, vector<vector<float>>(4));
 	int crInd = 0;
 	for (int i = 0; i < IndexCount; i++) {
-		C[i][0] = { YZVertices[i].Position[0], YZVertices[i].Position[1], 0.0f, 1.0f };
+		C[i][0] = { ZYVertices[i].Position[0], ZYVertices[i].Position[1], 0.0f, 1.0f };
 	}
 
 	for (int i = 0; i < IndexCount; i++) {
-		C[i][3] = { YZVertices[(i + 1) % IndexCount].Position[0], YZVertices[(i + 1) % IndexCount].Position[1], 0.0f, 1.0f };
+		C[i][3] = { ZYVertices[(i + 1) % IndexCount].Position[0], ZYVertices[(i + 1) % IndexCount].Position[1], 0.0f, 1.0f };
 	}
 
 	for (int i = 0; i < IndexCount; i++) {
-		C[i][1] = { YZVertices[i].Position[0] + 0.625f * (YZVertices[(i + 1) % IndexCount].Position[0] - YZVertices[(i - 1 + IndexCount) % IndexCount].Position[0]) / 3, 
-			YZVertices[i].Position[1] + 0.625f * (YZVertices[(i + 1) % IndexCount].Position[1] - YZVertices[(i - 1 + IndexCount) % IndexCount].Position[1]) / 3, 0.0f, 1.0f };
-		C[(i - 1 + IndexCount) % IndexCount][2] = { YZVertices[i].Position[0] - 0.625f * (YZVertices[(i + 1) % IndexCount].Position[0] - YZVertices[(i - 1 + IndexCount) % IndexCount].Position[0]) / 3,
-			YZVertices[i].Position[1] - 0.625f * (YZVertices[(i + 1) % IndexCount].Position[1] - YZVertices[(i - 1 + IndexCount) % IndexCount].Position[1]) / 3, 0.0f, 1.0f };
+		C[i][1] = { ZYVertices[i].Position[0] + 0.625f * (ZYVertices[(i + 1) % IndexCount].Position[0] - ZYVertices[(i - 1 + IndexCount) % IndexCount].Position[0]) / 3, 
+			ZYVertices[i].Position[1] + 0.625f * (ZYVertices[(i + 1) % IndexCount].Position[1] - ZYVertices[(i - 1 + IndexCount) % IndexCount].Position[1]) / 3, 0.0f, 1.0f };
+		C[(i - 1 + IndexCount) % IndexCount][2] = { ZYVertices[i].Position[0] - 0.625f * (ZYVertices[(i + 1) % IndexCount].Position[0] - ZYVertices[(i - 1 + IndexCount) % IndexCount].Position[0]) / 3,
+			ZYVertices[i].Position[1] - 0.625f * (ZYVertices[(i + 1) % IndexCount].Position[1] - ZYVertices[(i - 1 + IndexCount) % IndexCount].Position[1]) / 3, 0.0f, 1.0f };
 	}
 
 	if (key3Flag) {
@@ -538,7 +589,7 @@ void createYZCR() {
 			v2->SetCoords(new float[4] {C[i][1][0], C[i][1][1], 0.0f, 1.0f}), v2->SetColor(new float[4] { 255.0f, 0.0f, 0.0f, 1.0f });
 			v3->SetCoords(new float[4] {C[i][2][0], C[i][2][1], 0.0f, 1.0f}), v3->SetColor(new float[4] { 255.0f, 0.0f, 0.0f, 1.0f });
 			v4->SetCoords(new float[4] {C[i][3][0], C[i][3][1], 0.0f, 1.0f}), v4->SetColor(new float[4] { 255.0f, 0.0f, 0.0f, 1.0f });
-			YZCRVertices[crInd++] = *v1, YZCRVertices[crInd++] = *v2, YZCRVertices[crInd++] = *v3, YZCRVertices[crInd++] = *v4;
+			ZYCRVertices[crInd++] = *v1, ZYCRVertices[crInd++] = *v2, ZYCRVertices[crInd++] = *v3, ZYCRVertices[crInd++] = *v4;
 		}
 
 		vector<vector<float>> Points;
@@ -553,7 +604,7 @@ void createYZCR() {
 		for (int pi = 0; pi < IndexCount; pi++) {
 			vector<vector<float>> p = { C[pi][0], C[pi][1], C[pi][2], C[pi][3] }, q = p;
 
-			for (float t = 0.0f; t <= 1.0f; t += 0.05882352941f) {
+			for (float t = T; t <= 1.0f; t += T) {
 				for (int k = 1; k < 4; k++) {
 					for (int i = 0; i < 4 - k; i++) {
 						q[i][0] = (1 - t) * q[i][0] + t * q[i + 1][0];
@@ -562,12 +613,14 @@ void createYZCR() {
 				}
 
 				//cout << "Curve point: " << q[0][0] << " " << q[0][1] << endl;
-				YZCurveVertices[cInd].SetCoords(new float[4] { q[0][0], q[0][1], 0.0f, 1.0f });
-				YZCurveVertices[cInd++].SetColor(new float[4] { 0.0f, 255.0f, 0.0f, 1.0f });
+				ZYCurveVertices[cInd].SetCoords(new float[4] { q[0][0], q[0][1], 0.0f, 1.0f });
+				ZYCurveVertices[cInd++].SetColor(new float[4] { 0.0f, 255.0f, 0.0f, 1.0f });
 			}
 		}
 	}
 }
+
+int triangleInd = 0;
 
 void createObjects(void) {
 	// ATTN: DERIVE YOUR NEW OBJECTS HERE:  each object has
@@ -588,25 +641,27 @@ void createObjects(void) {
 		Vertices[8].SetCoords(new float[4] {-0.501f, -1.541f, 0.0f, 1.0f});
 		Vertices[9].SetCoords(new float[4] {-0.809f, -0.588f, 0.0f, 1.0f});
 
-		YZVertices[0].SetCoords(new float[4] {0, 0.0f, 0.0f, 1.0f});
-		YZVertices[1].SetCoords(new float[4] {0.809f, 0.588f, 0.0f, 1.0f});
-		YZVertices[2].SetCoords(new float[4] {0.501f, 1.541f, 0.0f, 1.0f});
-		YZVertices[3].SetCoords(new float[4] {-0.501f, 1.541f, 0.0f, 1.0f});
-		YZVertices[4].SetCoords(new float[4] {-0.809f, 0.588f, 0.0f, 1.0f});
-		YZVertices[5].SetCoords(new float[4] {0, 0.0f, 0.0f, 1.0f});
-		YZVertices[6].SetCoords(new float[4] {0.809f, -0.588f, 0.0f, 1.0f});
-		YZVertices[7].SetCoords(new float[4] {0.501f, -1.541f, 0.0f, 1.0f});
-		YZVertices[8].SetCoords(new float[4] {-0.501f, -1.541f, 0.0f, 1.0f});
-		YZVertices[9].SetCoords(new float[4] {-0.809f, -0.588f, 0.0f, 1.0f});
+		ZYVertices[0].SetCoords(new float[4] {0, 0.0f, 0.0f, 1.0f});
+		ZYVertices[1].SetCoords(new float[4] {0.809f, 0.588f, 0.0f, 1.0f});
+		ZYVertices[2].SetCoords(new float[4] {0.501f, 1.541f, 0.0f, 1.0f});
+		ZYVertices[3].SetCoords(new float[4] {-0.501f, 1.541f, 0.0f, 1.0f});
+		ZYVertices[4].SetCoords(new float[4] {-0.809f, 0.588f, 0.0f, 1.0f});
+		ZYVertices[5].SetCoords(new float[4] {0, 0.0f, 0.0f, 1.0f});
+		ZYVertices[6].SetCoords(new float[4] {0.809f, -0.588f, 0.0f, 1.0f});
+		ZYVertices[7].SetCoords(new float[4] {0.501f, -1.541f, 0.0f, 1.0f});
+		ZYVertices[8].SetCoords(new float[4] {-0.501f, -1.541f, 0.0f, 1.0f});
+		ZYVertices[9].SetCoords(new float[4] {-0.809f, -0.588f, 0.0f, 1.0f});
 
 		for (int i = 0; i < IndexCount; i++) {
-			swap(YZVertices[i].Position[0], YZVertices[i].Position[1]);
-			swap(YZVertices[i].Position[1], YZVertices[i].Position[2]);
+			swap(ZYVertices[i].Position[0], ZYVertices[i].Position[1]);
+			swap(ZYVertices[i].Position[1], ZYVertices[i].Position[2]);
 
 			Vertices[i].Position[1] += 1;
-			YZVertices[i].Position[1] -= 2.5;
+			ZYVertices[i].Position[1] -= 2.5;
 
-			cout << "Initial YZ Coordinates: " << YZVertices[i].Position[0] << ", " << YZVertices[i].Position[1] << endl;
+			swap(ZYVertices[i].Position[0], ZYVertices[i].Position[1]);
+
+			cout << "Initial ZY Coordinates: " << ZYVertices[i].Position[0] << ", " << ZYVertices[i].Position[1] << endl;
 		}
 
 		P.resize(6);
@@ -636,6 +691,12 @@ void createObjects(void) {
 			P[0].push_back(Vertices[i]);
 		}
 
+		for (int i = 0; i < TriangleIndexCount; i++) {
+			TriangleIndices[i] = i;
+			TriangleVertices[i].SetColor(new float[4] {255.0f, 255.0f, 0.0f, 1.0f});
+			ZYTriangleVertices[i].SetColor(new float[4] {255.0f, 255.0f, 0.0f, 1.0f});
+		}
+
 		/*for (int i = 0; i < IndexCount; i++)
 		{
 			float theta = 2.0f * 3.1415926f * float(i) / float(IndexCount); 
@@ -660,25 +721,25 @@ void createObjects(void) {
 	Vertices[8].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
 	Vertices[9].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
 
-	YZVertices[0].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
-	YZVertices[1].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
-	YZVertices[2].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
-	YZVertices[3].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
-	YZVertices[4].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
-	YZVertices[5].SetColor(new float[4] { 1.0f, 1.0f, 0.0f, 1.0f });
-	YZVertices[6].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
-	YZVertices[7].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
-	YZVertices[8].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
-	YZVertices[9].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
+	ZYVertices[0].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
+	ZYVertices[1].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
+	ZYVertices[2].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
+	ZYVertices[3].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
+	ZYVertices[4].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
+	ZYVertices[5].SetColor(new float[4] { 1.0f, 1.0f, 0.0f, 1.0f });
+	ZYVertices[6].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
+	ZYVertices[7].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
+	ZYVertices[8].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
+	ZYVertices[9].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
 
 	/*for (int i = 0; i < IndexCount; i++) {
-		YZVertices[i].SetCoords(new float[4] {Vertices[i].Position[1], Vertices[i].Position[2], 0.0f, 1.0f});
+		ZYVertices[i].SetCoords(new float[4] {Vertices[i].Position[1], Vertices[i].Position[2], 0.0f, 1.0f});
 	}*/
 
 	/*for (int i = 0; i < IndexCount; i++) {
 		for (int j = 0; j < 3; j++) {
 			Vertices[i].Position[j] = Vertices[i].Position[j] * 0.5 - 1;
-			YZVertices[i].Position[j] = YZVertices[i].Position[j] * 0.5 + 1;
+			ZYVertices[i].Position[j] = ZYVertices[i].Position[j] * 0.5 + 1;
 		}
 	}*/
 
@@ -737,7 +798,40 @@ void createObjects(void) {
 
 	createBB();
 	createCR();
-	createYZCR();
+	createZYCR();
+
+	if (key5Flag && key3Flag) {
+		cout << "orig curve vertices: " << CurveVertices[triangleInd].Position[0] << " " << CurveVertices[triangleInd].Position[1] << " WITH IND " << triangleInd << endl;
+		TriangleVertices[0].SetCoords(CurveVertices[triangleInd].Position);
+		TriangleVertices[1].SetCoords(new float[4] { TriangleVertices[1].Position[0] + 1.f * cos(1.0472f), TriangleVertices[1].Position[0] + 1.f * sin(1.0472f), 0.0f, 1.0f });
+		TriangleVertices[2].SetCoords(new float[4] { TriangleVertices[1].Position[0] + 1.f * cos(2 * 1.0472f), TriangleVertices[1].Position[0] + 1.f * sin(2 * 1.0472f), 0.0f, 1.0f });
+
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[8]);
+		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[8], TriangleVertices, GL_STATIC_DRAW);
+
+		if (key4Flag) {
+			ZYTriangleVertices[0].SetCoords(ZYCurveVertices[triangleInd].Position);
+			ZYTriangleVertices[1].SetCoords(new float[4] { ZYTriangleVertices[1].Position[0] + 1.f * cos(1.0472f), ZYTriangleVertices[1].Position[0] + 1.f * sin(1.0472f), 0.0f, 1.0f });
+			ZYTriangleVertices[2].SetCoords(new float[4] { ZYTriangleVertices[1].Position[0] + 1.f * cos(2 * 1.0472f), ZYTriangleVertices[1].Position[0] + 1.f * sin(2 * 1.0472f), 0.0f, 1.0f });
+			glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[9]);
+			glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[9], ZYTriangleVertices, GL_STATIC_DRAW);
+		}
+
+		triangleInd = (triangleInd + 1) % CurveIndexCount;
+
+		if (CurveVertices[triangleInd].Position[0] == 0.0f && CurveVertices[triangleInd].Position[1] == 0.0f)
+			triangleInd = 1;
+
+		cout << "setting triangle vertices: " << TriangleVertices[0].Position[0] << " " << TriangleVertices[0].Position[1] << endl;
+	}
+
+	//frameCount = (frameCount + 1) % 2;
+
+	/*else {
+		TriangleVertices[0].SetCoords(CurveVertices[0].Position);
+		TriangleVertices[1].SetCoords(ZYCurveVertices[0].Position);
+		triangleInd = 0;
+	}*/
 	/*if(key3Flag) 
 		bindBuffers();*/
 
@@ -844,35 +938,17 @@ void moveVertex(void) {
 			worldCoords[2] = Vertices[gPickedIndex].Position[2];
 		}
 
-		//worldCoords[2] = Vertices[gPickedIndex].Position[2];
-		//worldCoords[2] = shiftFlag ? worldCoords[1] : worldCoords[2];
 		Vertices[gPickedIndex].SetCoords(worldCoords);
 		Vertices[gPickedIndex].SetColor(newColor);
 
-		YZVertices[gPickedIndex].SetCoords(new float[4] {-worldCoords[1], worldCoords[2] - 2.5f, 0.0f, 1.0f});
-		YZVertices[gPickedIndex].SetColor(newColor);
+		ZYVertices[gPickedIndex].SetCoords(new float[4] {-worldCoords[1], worldCoords[2] - 2.5f, 0.0f, 1.0f});
+		ZYVertices[gPickedIndex].SetColor(newColor);
 
-		cout << "yz coordinates of "<<gPickedIndex<<" : " << YZVertices[gPickedIndex].Position[0] << ", " << YZVertices[gPickedIndex].Position[1] << endl;
+		swap(ZYVertices[gPickedIndex].Position[0], ZYVertices[gPickedIndex].Position[1]);
+		cout << "ZY coordinates of "<<gPickedIndex<<" : " << ZYVertices[gPickedIndex].Position[0] << ", " << ZYVertices[gPickedIndex].Position[1] << endl;
 	}
 
 	bindBuffers();
-	/*glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[0]);
-	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[0], Vertices, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[1]);
-	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[1], SubVertices, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[2]);
-	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[2], BBVertices, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[3]);
-	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[3], CRVertices, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[4]);
-	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[4], CurveVertices, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[5]);
-	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[5], YZVertices, GL_STATIC_DRAW);*/
 
 	if (gPickedIndex >= IndexCount) { 
 		// Any number > vertices-indices is background!
@@ -915,57 +991,61 @@ void renderScene(void) {
 		// ATTN: OTHER BINDING AND DRAWING COMMANDS GO HERE
 		// one set per object:
 		// glBindVertexArray(VertexArrayId[<x>]); etc etc
-		glBindVertexArray(VertexArrayId[1]);	// Draw Vertices
-		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[1], SubVertices);		// Update buffer data
-		glDrawElements(GL_POINTS, NumIdcs[1], GL_UNSIGNED_SHORT, (void*)0);
+		
+		if (key1Flag) {
+			glBindVertexArray(VertexArrayId[1]);	// Draw Vertices
+			glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[1], SubVertices);		// Update buffer data
+			glDrawElements(GL_POINTS, NumIdcs[1], GL_UNSIGNED_SHORT, (void*)0);
+		}
 
 		if (key2Flag) {
 			glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
 			glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[2], BBVertices);		// Update buffer data
-			if (key2Flag) {
-				glDrawElements(GL_POINTS, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
-			}
+			glDrawElements(GL_POINTS, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
 		}
 
-		
-		//glBindVertexArray(VertexArrayId[3]);	// Draw Vertices
-		//glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[3], CRVertices);		// Update buffer data
-		//if (key3Flag) {
-		//	glDrawElements(GL_POINTS, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
-		//}
-
-		glBindVertexArray(VertexArrayId[4]);	// Draw Vertices
-		glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[4], CurveVertices);		// Update buffer data
 		if (key3Flag) {
+			glBindVertexArray(VertexArrayId[3]);	// Draw Vertices
+			glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[3], CRVertices);
+			glDrawElements(GL_POINTS, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
+			glBindVertexArray(VertexArrayId[4]);	// Draw Vertices
+			glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[4], CurveVertices);		// Update buffer data
 			glDrawElements(GL_LINE_LOOP, NumIdcs[4], GL_UNSIGNED_SHORT, (void*)0);
-			//glDrawElements(GL_LINE_LOOP, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
 		}
-		
 
 		if (key4Flag) {
-
 			glBindVertexArray(VertexArrayId[5]);	// Draw Vertices
-			glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[5], YZVertices);
+			glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[5], ZYVertices);
+			glDrawElements(GL_POINTS, NumIdcs[5], GL_UNSIGNED_SHORT, (void*)0);
+			glDrawElements(GL_LINE_LOOP, NumIdcs[5], GL_UNSIGNED_SHORT, (void*)0);
 
-			if (key4Flag) {
-				glDrawElements(GL_POINTS, NumIdcs[5], GL_UNSIGNED_SHORT, (void*)0);
-				glDrawElements(GL_LINE_LOOP, NumIdcs[5], GL_UNSIGNED_SHORT, (void*)0);
-			}
-
-			//glBindVertexArray(VertexArrayId[6]);	// Draw Vertices
-			//glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[6], YZCRVertices);		// Update buffer data
-			//if (key3Flag) {
-			//	glDrawElements(GL_POINTS, NumIdcs[6], GL_UNSIGNED_SHORT, (void*)0);
-			//	//glDrawElements(GL_LINE_LOOP, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
-			//}
-
-			glBindVertexArray(VertexArrayId[7]);	// Draw Vertices
-			glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[7], YZCurveVertices);		// Update buffer data
 			if (key3Flag) {
+				glBindVertexArray(VertexArrayId[6]);	// Draw Vertices
+				glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[6], ZYCRVertices);
+				glDrawElements(GL_POINTS, NumIdcs[6], GL_UNSIGNED_SHORT, (void*)0);
+				glBindVertexArray(VertexArrayId[7]);	// Draw Vertices
+				glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[7], ZYCurveVertices);		// Update buffer data
 				glDrawElements(GL_LINE_LOOP, NumIdcs[7], GL_UNSIGNED_SHORT, (void*)0);
 			}
+
+			if (key5Flag) {
+				cout << "RENDERING TRAINGLE KEY5: " << key5Flag << " AND KEY3FLAG: " << key3Flag << endl;
+				cout << "TRIANGLE VERTEX: " << TriangleVertices[0].Position[1] << endl;
+				glBindVertexArray(VertexArrayId[8]);	// Draw Vertices
+				glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[8], TriangleVertices);
+				glDrawElements(GL_POINTS, NumIdcs[8], GL_UNSIGNED_SHORT, (void*)0);
+
+				glBindVertexArray(VertexArrayId[10]);	// Draw Vertices
+				glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[10], TNBVertices);
+				glDrawElements(GL_LINES_ADJACENCY, NumIdcs[10], GL_UNSIGNED_SHORT, (void*)0);
+
+				if (key4Flag) {
+					glBindVertexArray(VertexArrayId[9]);	// Draw Vertices
+					glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[9], ZYTriangleVertices);
+					glDrawElements(GL_POINTS, NumIdcs[9], GL_UNSIGNED_SHORT, (void*)0);
+				}
+			}
 		}
-		
 
 		// ATTN: Project 1C, Task 2 == Refer to https://learnopengl.com/Getting-started/Transformations and
 		// https://learnopengl.com/Getting-started/Coordinate-Systems - draw all the objects associated with the
@@ -1011,12 +1091,14 @@ static void mouseCallback(GLFWwindow* window, int button, int action, int mods) 
 			Vertices[gPickedIndex].SetColor(prevColor);
 			Vertices[gPickedIndex].SetCoords(worldCoords);
 
-			YZVertices[gPickedIndex].SetCoords(new float[4] {-worldCoords[1], worldCoords[2] - 2.5f, 0.0f, 1.0f});
-			YZVertices[gPickedIndex].SetColor(prevColor);
+			ZYVertices[gPickedIndex].SetCoords(new float[4] {-worldCoords[1], worldCoords[2] - 2.5f, 0.0f, 1.0f});
+			ZYVertices[gPickedIndex].SetColor(prevColor);
+
+			swap(ZYVertices[gPickedIndex].Position[0], ZYVertices[gPickedIndex].Position[1]);
 
 			cout << "release: " << Vertices[gPickedIndex].Position[2] << endl;
 
-			cout << "yz coordinates of " << gPickedIndex << " : " << YZVertices[gPickedIndex].Position[0] << ", " << YZVertices[gPickedIndex].Position[1] << endl;
+			cout << "ZY coordinates of " << gPickedIndex << " : " << ZYVertices[gPickedIndex].Position[0] << ", " << ZYVertices[gPickedIndex].Position[1] << endl;
 
 		}
 
@@ -1038,7 +1120,7 @@ static void mouseCallback(GLFWwindow* window, int button, int action, int mods) 
 		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[4], CurveVertices, GL_STATIC_DRAW);
 
 		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[5]);
-		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[5], YZVertices, GL_STATIC_DRAW);*/
+		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[5], ZYVertices, GL_STATIC_DRAW);*/
 	}
 }
 
@@ -1053,7 +1135,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 	}
 
 	if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
-		key2Flag = key2Flag ? false : true;
+		key2Flag = !key2Flag;
 		createBB();
 		if (key2Flag) {
 			glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[2]);  
@@ -1062,7 +1144,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 	}
 
 	if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
-		key3Flag = key3Flag ? false : true;
+		key3Flag = !key3Flag;
 		createCR();
 		if (key3Flag) {
 			glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[3]);
@@ -1070,6 +1152,12 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 
 			glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[4]);
 			glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[4], CurveVertices, GL_STATIC_DRAW);
+
+			glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[6]);
+			glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[6], ZYCRVertices, GL_STATIC_DRAW);
+
+			glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[7]);
+			glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[7], ZYCurveVertices, GL_STATIC_DRAW);
 		}
 	}
 
@@ -1079,6 +1167,10 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 
 	if (key == GLFW_KEY_4 && action == GLFW_PRESS) {
 		key4Flag = !key4Flag;
+	}
+
+	if (key == GLFW_KEY_5 && action == GLFW_PRESS) {
+		key5Flag = true;
 	}
 }
 
