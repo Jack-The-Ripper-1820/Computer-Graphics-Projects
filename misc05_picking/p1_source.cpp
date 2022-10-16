@@ -687,7 +687,7 @@ void createZYCR() {
 
 				float tx = tangentPoint[0], ty = tangentPoint[1];
 				float utx = tx / pow(tx * tx + ty * ty, 0.5), uty = ty / pow(tx * tx + ty * ty, 0.5);
-				ZYTangentVertices[cInd++].SetCoords(new float[4] {tx + q[0][0], ty + q[0][1], 0.0f, 1.0f});
+				ZYTangentVertices[cInd].SetCoords(new float[4] {tx + q[0][0], ty + q[0][1], 0.0f, 1.0f});
 
 				float nx = tangentPoint[0] + 1.f * cosf(1.5708), ny = tangentPoint[1] + 1.f * sinf(1.5708);
 				float unx = nx / pow(nx * nx + ny * ny, 0.5), uny = ny / pow(nx * nx + ny * ny, 0.5);
