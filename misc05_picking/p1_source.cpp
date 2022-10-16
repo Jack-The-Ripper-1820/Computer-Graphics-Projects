@@ -693,8 +693,10 @@ void createObjects(void) {
 
 		for (int i = 0; i < TriangleIndexCount; i++) {
 			TriangleIndices[i] = i;
-			TriangleVertices[i].SetColor(new float[4] {255.0f, 255.0f, 0.0f, 1.0f});
-			ZYTriangleVertices[i].SetColor(new float[4] {255.0f, 255.0f, 0.0f, 1.0f});
+		}
+
+		for (int i = 0; i < TNBIndexCount; i++) {
+			TNBIndices[i] = i;
 		}
 
 		/*for (int i = 0; i < IndexCount; i++)
@@ -731,6 +733,26 @@ void createObjects(void) {
 	ZYVertices[7].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
 	ZYVertices[8].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
 	ZYVertices[9].SetColor(new float[4] { 1.0f, 1.0f, 1.0f, 1.0f });
+
+	TNBVertices[0].SetColor(new float[4] {255.0f, 0.0f, 0.0f});
+	TNBVertices[1].SetColor(new float[4] {255.0f, 0.0f, 0.0f});
+	TNBVertices[2].SetColor(new float[4] {255.0f, 0.0f, 0.0f});
+	TNBVertices[3].SetColor(new float[4] {255.0f, 0.0f, 0.0f});
+	TNBVertices[4].SetColor(new float[4] {255.0f, 0.0f, 0.0f});
+	TNBVertices[5].SetColor(new float[4] {255.0f, 0.0f, 0.0f});
+
+	ZYTNBVertices[0].SetColor(new float[4] {255.0f, 0.0f, 0.0f});
+	ZYTNBVertices[1].SetColor(new float[4] {255.0f, 0.0f, 0.0f});
+	ZYTNBVertices[2].SetColor(new float[4] {255.0f, 0.0f, 0.0f});
+	ZYTNBVertices[3].SetColor(new float[4] {255.0f, 0.0f, 0.0f});
+	ZYTNBVertices[4].SetColor(new float[4] {255.0f, 0.0f, 0.0f});
+	ZYTNBVertices[5].SetColor(new float[4] {255.0f, 0.0f, 0.0f});
+
+
+	for (int i = 0; i < TriangleIndexCount; i++) {
+		TriangleVertices[i].SetColor(new float[4] {255.0f, 255.0f, 0.0f, 1.0f});
+		ZYTriangleVertices[i].SetColor(new float[4] {255.0f, 255.0f, 0.0f, 1.0f});
+	}
 
 	/*for (int i = 0; i < IndexCount; i++) {
 		ZYVertices[i].SetCoords(new float[4] {Vertices[i].Position[1], Vertices[i].Position[2], 0.0f, 1.0f});
@@ -803,18 +825,44 @@ void createObjects(void) {
 	if (key5Flag && key3Flag) {
 		cout << "orig curve vertices: " << CurveVertices[triangleInd].Position[0] << " " << CurveVertices[triangleInd].Position[1] << " WITH IND " << triangleInd << endl;
 		TriangleVertices[0].SetCoords(CurveVertices[triangleInd].Position);
-		TriangleVertices[1].SetCoords(new float[4] { TriangleVertices[1].Position[0] + 1.f * cos(1.0472f), TriangleVertices[1].Position[0] + 1.f * sin(1.0472f), 0.0f, 1.0f });
-		TriangleVertices[2].SetCoords(new float[4] { TriangleVertices[1].Position[0] + 1.f * cos(2 * 1.0472f), TriangleVertices[1].Position[0] + 1.f * sin(2 * 1.0472f), 0.0f, 1.0f });
+		TriangleVertices[1].SetCoords(new float[4] { TriangleVertices[0].Position[0] + 1.f * cosf(1.0472f), TriangleVertices[0].Position[1] + 1.f * sinf(1.0472f), 0.0f, 1.0f });
+		TriangleVertices[2].SetCoords(new float[4] { TriangleVertices[0].Position[0] + 1.f * cosf(2 * 1.0472f), TriangleVertices[0].Position[1] + 1.f * sinf(2 * 1.0472f), 0.0f, 1.0f });
 
 		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[8]);
 		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[8], TriangleVertices, GL_STATIC_DRAW);
 
+		TNBVertices[0].SetCoords(new float[4] { CurveVertices[triangleInd].Position[0], CurveVertices[triangleInd].Position[1], 0.0f, 1.0f });
+		TNBVertices[1].SetCoords(new float[4] {  TNBVertices[0].Position[0] + 1.f * cosf(1.5708f), TNBVertices[0].Position[1] + 1.f * sinf(1.5708f), 0.0f, 1.0f });
+		TNBVertices[2].SetCoords(new float[4] { CurveVertices[triangleInd].Position[0], CurveVertices[triangleInd].Position[1], 0.0f, 1.0f });
+		TNBVertices[3].SetCoords(new float[4] {  TNBVertices[2].Position[1] + 1.f * cosf(0.f), TNBVertices[2].Position[1] + 1.f * sinf(0.f), 0.0f, 1.0f });
+		TNBVertices[4].SetCoords(new float[4] { CurveVertices[triangleInd].Position[0], CurveVertices[triangleInd].Position[1], 0.0f, 1.0f });
+		TNBVertices[5].SetCoords(new float[4] {  TNBVertices[3].Position[0] + 1.f * cosf(2 * 1.5708f), TNBVertices[3].Position[1] + 1.f * sinf(2 * 1.5708f), 0.0f, 1.0f });
+
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[10]);
+		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[10], TNBVertices, GL_STATIC_DRAW);
+		/*TNBVertices[2].SetCoords(new float[4] { CurveVertices[(triangleInd - 1) % CurveIndexCount].Position[0], CurveVertices[(triangleInd - 1) % CurveIndexCount].Position[1], 0.0f, 1.0f });
+		TNBVertices[3].SetCoords(new float[4] { CurveVertices[(triangleInd - 1) % CurveIndexCount].Position[0], CurveVertices[(triangleInd - 1) % CurveIndexCount].Position[1], 0.0f, 1.0f });
+		TNBVertices[4].SetCoords(new float[4] { CurveVertices[(triangleInd - 1) % CurveIndexCount].Position[0], CurveVertices[(triangleInd - 1) % CurveIndexCount].Position[1], 0.0f, 1.0f });
+		TNBVertices[5].SetCoords(new float[4] { CurveVertices[(triangleInd - 1) % CurveIndexCount].Position[0], CurveVertices[(triangleInd - 1) % CurveIndexCount].Position[1], 0.0f, 1.0f });*/
+
+
 		if (key4Flag) {
 			ZYTriangleVertices[0].SetCoords(ZYCurveVertices[triangleInd].Position);
-			ZYTriangleVertices[1].SetCoords(new float[4] { ZYTriangleVertices[1].Position[0] + 1.f * cos(1.0472f), ZYTriangleVertices[1].Position[0] + 1.f * sin(1.0472f), 0.0f, 1.0f });
-			ZYTriangleVertices[2].SetCoords(new float[4] { ZYTriangleVertices[1].Position[0] + 1.f * cos(2 * 1.0472f), ZYTriangleVertices[1].Position[0] + 1.f * sin(2 * 1.0472f), 0.0f, 1.0f });
+			ZYTriangleVertices[1].SetCoords(new float[4] { ZYTriangleVertices[0].Position[0] + 1.f * cosf(1.0472f), ZYTriangleVertices[0].Position[1] + 1.f * sinf(1.0472f), 0.0f, 1.0f });
+			ZYTriangleVertices[2].SetCoords(new float[4] { ZYTriangleVertices[0].Position[0] + 1.f * cosf(2 * 1.0472f), ZYTriangleVertices[0].Position[1] + 1.f * sinf(2 * 1.0472f), 0.0f, 1.0f });
+			
 			glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[9]);
 			glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[9], ZYTriangleVertices, GL_STATIC_DRAW);
+
+			ZYTNBVertices[0].SetCoords(new float[4] { ZYCurveVertices[triangleInd].Position[0], ZYCurveVertices[triangleInd].Position[1], 0.0f, 1.0f });
+			ZYTNBVertices[1].SetCoords(new float[4] {  ZYTNBVertices[0].Position[0] + 1.f * cosf(1.5708f), ZYTNBVertices[0].Position[1] + 1.f * sinf(1.5708f), 0.0f, 1.0f });
+			ZYTNBVertices[2].SetCoords(new float[4] { ZYCurveVertices[triangleInd].Position[0], ZYCurveVertices[triangleInd].Position[1], 0.0f, 1.0f });
+			ZYTNBVertices[3].SetCoords(new float[4] {  ZYTNBVertices[2].Position[1] + 1.f * cosf(0.f), ZYTNBVertices[2].Position[1] + 1.f * sinf(0.f), 0.0f, 1.0f });
+			ZYTNBVertices[4].SetCoords(new float[4] { ZYCurveVertices[triangleInd].Position[0], ZYCurveVertices[triangleInd].Position[1], 0.0f, 1.0f });
+			ZYTNBVertices[5].SetCoords(new float[4] {  ZYTNBVertices[3].Position[0] + 1.f * cosf(2 * 1.5708f), ZYTNBVertices[3].Position[1] + 1.f * sinf(2 * 1.5708f), 0.0f, 1.0f });
+
+			glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[11]);
+			glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[11], ZYTNBVertices, GL_STATIC_DRAW);
 		}
 
 		triangleInd = (triangleInd + 1) % CurveIndexCount;
@@ -822,7 +870,9 @@ void createObjects(void) {
 		if (CurveVertices[triangleInd].Position[0] == 0.0f && CurveVertices[triangleInd].Position[1] == 0.0f)
 			triangleInd = 1;
 
-		cout << "setting triangle vertices: " << TriangleVertices[0].Position[0] << " " << TriangleVertices[0].Position[1] << endl;
+		cout << "setting triangle vertices: " << TriangleVertices[0].Position[0] << " " << TriangleVertices[0].Position[1] << ", " <<
+			TriangleVertices[1].Position[0] << " " << TriangleVertices[1].Position[1] << ", " <<
+			TriangleVertices[1].Position[0] << " " << TriangleVertices[1].Position[1] << endl;
 	}
 
 	//frameCount = (frameCount + 1) % 2;
@@ -970,6 +1020,14 @@ void renderScene(void) {
 	// Re-clear the screen for visible rendering
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	/*glBegin(GL_TRIANGLES);
+	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+	glVertex4f(0.0f, 0.0f, 0.0f, 1.0f);
+	glVertex4f(1.0f, 1.0f, 0.0f, 1.0f);
+	glVertex4f(1.0f, -1.0f, 0.0f, 1.0f);
+	glEnd();
+	glFlush();*/
+
 	glUseProgram(programID);
 	{
 		// see comments in pick
@@ -1031,18 +1089,35 @@ void renderScene(void) {
 			if (key5Flag) {
 				cout << "RENDERING TRAINGLE KEY5: " << key5Flag << " AND KEY3FLAG: " << key3Flag << endl;
 				cout << "TRIANGLE VERTEX: " << TriangleVertices[0].Position[1] << endl;
+				cout << "RENDERING XY TRIANGLES" << endl;
 				glBindVertexArray(VertexArrayId[8]);	// Draw Vertices
 				glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[8], TriangleVertices);
-				glDrawElements(GL_POINTS, NumIdcs[8], GL_UNSIGNED_SHORT, (void*)0);
+				glDrawElements(GL_LINE_LOOP, NumIdcs[8], GL_UNSIGNED_SHORT, (void*)0);
 
 				glBindVertexArray(VertexArrayId[10]);	// Draw Vertices
 				glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[10], TNBVertices);
-				glDrawElements(GL_LINES_ADJACENCY, NumIdcs[10], GL_UNSIGNED_SHORT, (void*)0);
+				glDrawElements(GL_LINES, NumIdcs[10], GL_UNSIGNED_SHORT, (void*)0);
 
 				if (key4Flag) {
+					cout << "RENDERING ZY TRIANGLES" << endl;
+					//glBegin(GL_TRIANGLES);
+					//glColor3f(1.0f, 1.0f, 1.0f);
+					///*glVertex2i(ZYTriangleVertices[0].Position[0], ZYTriangleVertices[0].Position[1]);
+					//glVertex2i(ZYTriangleVertices[1].Position[0], ZYTriangleVertices[1].Position[1]);
+					//glVertex2i(ZYTriangleVertices[2].Position[0], ZYTriangleVertices[2].Position[1]);*/
+					//glVertex2i(0.0f, 0.0f);
+					//glVertex2i(1.0f, 1.0f);
+					//glVertex2i(1.0f, -1.0f);
+					//glEnd();
+					//glFlush();
 					glBindVertexArray(VertexArrayId[9]);	// Draw Vertices
 					glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[9], ZYTriangleVertices);
-					glDrawElements(GL_POINTS, NumIdcs[9], GL_UNSIGNED_SHORT, (void*)0);
+					//glDrawArrays(GL_, 0, 3);
+					glDrawElements(GL_LINE_LOOP, NumIdcs[9], GL_UNSIGNED_SHORT, (void*)0);
+
+					glBindVertexArray(VertexArrayId[11]);	// Draw Vertices
+					glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[11], ZYTNBVertices);
+					glDrawElements(GL_LINES, NumIdcs[11], GL_UNSIGNED_SHORT, (void*)0);
 				}
 			}
 		}
@@ -1145,7 +1220,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 
 	if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
 		key3Flag = !key3Flag;
-		createCR();
+		createCR(); 
 		if (key3Flag) {
 			glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[3]);
 			glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[3], CRVertices, GL_STATIC_DRAW);
