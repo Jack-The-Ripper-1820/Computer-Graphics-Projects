@@ -90,7 +90,6 @@ void bindBuffers();
 // GLOBAL VARIABLES
 GLFWwindow* window;
 const GLuint window_width = 1024, window_height = 768;
-const GLuint origWindowWidth = 1024, origWindowHeight = 768;
 
 glm::mat4 gProjectionMatrix;
 glm::mat4 gViewMatrix;
@@ -176,23 +175,6 @@ bool shiftFlag = false;
 bool key4Flag = false;
 bool key5Flag = false;
 float T = 0.01;
-
-//float prevY[IndexCount];
-
-//private void resizeWindow(int argWidth, int argHeight) {
-//	glViewport(0, 0, argWidth, argHeight);
-//
-//	adjustProjectionMatrix(width, height); // recalculating projection matrix (only if you are using one)
-//}
-
-//void window_size_callback(GLFWwindow* window, int width, int height)
-//{
-//	window_width = width, window_height = height;
-//	float ratio = (width * height) / (origWindowWidth * origWindowHeight);
-//
-//	gProjectionMatrix = glm::ortho(-4.0f * ratio, 4.0f * ratio, -3.0f * ratio, 3.0f * ratio, 0.0f * ratio, 100.0f * ratio); // In world coordinates
-//}
-
 
 int initWindow(void) {
 	// Initialise GLFW
@@ -462,7 +444,6 @@ int ind = 0;
 
 void subDivide() {
 	k++;
-	//cout << "k after increment: " << k << endl;
 	if (k > 5) {
 		k = 0;
 		Vertex* v = new Vertex();
@@ -474,8 +455,6 @@ void subDivide() {
 	}
 
 	int n = P[k].size();
-
-	//cout << "k and n : " << k << " " << n << endl;
 }
 
 void createBB() {
@@ -511,54 +490,18 @@ void createBB() {
 	}
 }
 
-float* getTangentPoint(vector<float> &P0, vector<float>& P1, vector<float>& P2, vector<float>& P3, float t) {
-	//P'(t) = -3(1 - t) ^ 2 * P0 + 3(1 - t) ^ 2 * P1 - 6t(1 - t) * P1 - 3t ^ 2 * P2 + 6t(1 - t) * P2 + 3t ^ 2 * P3
-	float tangent[2] = { 0.0f, 0.0f };
-
-	tangent[0] = -3 * pow(1 - t, 2) * P0[0] + 3 * pow(1 - t, 2) * P1[0] - 6 * t * (1 - t) * P1[0] - pow(3 * t, 2) * P2[0] + 6 * t * (1 - t) * P2[0] + 3 * pow(3 * t, 2) * P3[0];
-	tangent[1] = -3 * pow(1 - t, 2) * P0[1] + 3 * pow(1 - t, 2) * P1[1] - 6 * t * (1 - t) * P1[1] - pow(3 * t, 2) * P2[1] + 6 * t * (1 - t) * P2[1] + 3 * pow(3 * t, 2) * P3[1];
-
-	return tangent;
-}
-
 float* bezierTangent(float t, vector<float>& a, vector<float>& b, vector<float>& c, vector<float>& d)
 {
-	// note that abcd are aka x0 x1 x2 x3
-
-/*  the four coefficients ..
-	A = x3 - 3 * x2 + 3 * x1 - x0
-	B = 3 * x2 - 6 * x1 + 3 * x0
-	C = 3 * x1 - 3 * x0
-	D = x0
-
-	and then...
-	Vx = 3At2 + 2Bt + C         */
-
-	// first calcuate what are usually know as the coeffients,
-	// they are trivial based on the four control points:
-
 	float C1x = (d[0] - (3.0 * c[0]) + (3.0 * b[0]) - a[0]);
 	float C2x = ((3.0 * c[0]) - (6.0 * b[0]) + (3.0 * a[0]));
 	float C3x = ((3.0 * b[0]) - (3.0 * a[0]));
-	float C4x = (a[0]);  // (not needed for this calculation)
 
 	float C1y = (d[1] - (3.0 * c[1]) + (3.0 * b[1]) - a[1]);
 	float C2y = ((3.0 * c[1]) - (6.0 * b[1]) + (3.0 * a[1]));
 	float C3y = ((3.0 * b[1]) - (3.0 * a[1]));
-	float C4y = (a[1]);  // (not needed for this calculation)
-
-	// finally it is easy to calculate the slope element,
-	// using those coefficients:
 
 	return new float[4]  {(3.0f * C1x * t * t) + (2.0f * C2x * t) + C3x, (3.0f * C1y * t * t) + (2.0f * C2y * t) + C3y };
-
-	// note that this routine works for both the x and y side;
-	// simply run this routine twice, once for x once for y
-	// note that there are sometimes said to be 8 (not 4) coefficients,
-	// these are simply the four for x and four for y,
-	// calculated as above in each case.
 }
-int crFinalInd = 0, zyCrFinalInd = 0;
 
 void createCR() {
 	//cout << "in CreateCR" << endl;
@@ -611,8 +554,6 @@ void createCR() {
 				CurveVertices[cInd].SetCoords(new float[4] { q[0][0], q[0][1], 0.0f, 1.0f });
 				CurveVertices[cInd].SetColor(new float[4] { 0.0f, 255.0f, 0.0f, 1.0f });
 
-				//cout << "T: " << t << " Ps: " << p[0][0] << ", " << p[0][1] << endl;
-				//float* tangentPoint = getTangentPoint(p[0], p[1], p[2], p[3], t);
 				float* tangentPoint = bezierTangent(t, p[0], p[1], p[2], p[3]);
 
 				float tx = tangentPoint[0], ty = tangentPoint[1];
@@ -627,7 +568,7 @@ void createCR() {
 				float ubix = bix / pow(bix * bix + biy * biy, 0.5), ubiy = biy / pow(bix * bix + biy * biy, 0.5);
 				BiNormalVertices[cInd].SetCoords(new float[4] {bix + q[0][0], biy + q[0][1], 0.0f, 1.0f});
 
-				crFinalInd = cInd++;
+				cInd++;
 			}
 		}
 	}
@@ -700,7 +641,7 @@ void createZYCR() {
 				float ubix = bix / pow(bix * bix + biy * biy, 0.5), ubiy = biy / pow(bix * bix + biy * biy, 0.5);
 				ZYBiNormalVertices[cInd].SetCoords(new float[4] {bix + q[0][0], biy + q[0][1], 0.0f, 1.0f});
 
-				zyCrFinalInd = cInd++;
+				cInd++;
 			}
 		}
 	}
@@ -719,8 +660,8 @@ void createObjects(void) {
 		for (int i = 0; i < IndexCount; i++) {
 			float angle = 2 * i * 3.14 / IndexCount;
 
-			Vertices[i].SetCoords(new float[4] {sinf(angle), cosf(angle), 0.0f, 1.0f});
-			ZYVertices[i].SetCoords(new float[4] {sinf(angle), cosf(angle), 0.0f, 1.0f});
+			Vertices[i].SetCoords(new float[4] {cosf(angle) + 1, sinf(angle), 0.0f, 1.0f});
+			ZYVertices[i].SetCoords(new float[4] {cosf(angle), sinf(angle) - 1, 0.0f, 1.0f});
 		}
 		/*Vertices[0].SetCoords(new float[4] {0, 0.0f, 0.0f, 1.0f});
 		Vertices[1].SetCoords(new float[4] {0.809f, 0.588f, 0.0f, 1.0f});
@@ -802,13 +743,6 @@ void createObjects(void) {
 			Indices[i] = i;
 		}*/
 
-		TriangleVertices[0].SetCoords(new float[4] {CurveVertices[0].Position[0], CurveVertices[0].Position[1], 0.0f, 1.0f});
-		TriangleVertices[1].SetCoords(new float[4] {CurveVertices[triangleInd].Position[0] - 0.25f, CurveVertices[triangleInd].Position[1] - 0.25f, 0.0f, 1.0f});
-		TriangleVertices[1].SetCoords(new float[4] {CurveVertices[triangleInd].Position[0] + 0.25f, CurveVertices[triangleInd].Position[1] + 0.25f, 0.0f, 1.0f});
-
-		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[8]);
-		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[8], TriangleVertices, GL_STATIC_DRAW);
-
 		initFlag = false;
 	}
 
@@ -853,17 +787,6 @@ void createObjects(void) {
 		TriangleVertices[i].SetColor(new float[4] {255.0f, 255.0f, 0.0f, 1.0f});
 		ZYTriangleVertices[i].SetColor(new float[4] {255.0f, 255.0f, 0.0f, 1.0f});
 	}
-
-	/*for (int i = 0; i < IndexCount; i++) {
-		ZYVertices[i].SetCoords(new float[4] {Vertices[i].Position[1], Vertices[i].Position[2], 0.0f, 1.0f});
-	}*/
-
-	/*for (int i = 0; i < IndexCount; i++) {
-		for (int j = 0; j < 3; j++) {
-			Vertices[i].Position[j] = Vertices[i].Position[j] * 0.5 - 1;
-			ZYVertices[i].Position[j] = ZYVertices[i].Position[j] * 0.5 + 1;
-		}
-	}*/
 
 	for (int i = 0; i < IndexCount; i++) {
 		P[0][i] = Vertices[i];
@@ -923,16 +846,6 @@ void createObjects(void) {
 	createZYCR();
 
 	if (key5Flag && key3Flag) {
-		//cout << "orig curve vertices: " << CurveVertices[triangleInd].Position[0] << " " << CurveVertices[triangleInd].Position[1] << " WITH IND " << triangleInd << endl;
-		/*TriangleVertices[0].SetCoords(CurveVertices[triangleInd].Position);
-		TriangleVertices[1].SetCoords(new float[4] { TriangleVertices[0].Position[0] + 1.f * cosf(1.0472f), TriangleVertices[0].Position[1] + 1.f * sinf(1.0472f), 0.0f, 1.0f });
-		TriangleVertices[2].SetCoords(new float[4] { TriangleVertices[0].Position[0] + 1.f * cosf(2 * 1.0472f), TriangleVertices[0].Position[1] + 1.f * sinf(2 * 1.0472f), 0.0f, 1.0f });
-
-		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[8]);
-		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[8], TriangleVertices, GL_STATIC_DRAW);*/
-
-		//cout << "TAAAAAAAAAAAAAAAAAAAANGENT VERTEX LOOOCATION: " << TangentVertices[triangleInd].Position[0] << " " << TangentVertices[triangleInd].Position[1] << endl;
-
 		TNBVertices[0].SetCoords(new float[4] { CurveVertices[triangleInd].Position[0], CurveVertices[triangleInd].Position[1], 0.0f, 1.0f });
 		TNBVertices[1].SetCoords(new float[4] {  TangentVertices[triangleInd].Position[0], TangentVertices[triangleInd].Position[1], 0.0f, 1.0f });
 		TNBVertices[2].SetCoords(new float[4] { CurveVertices[triangleInd].Position[0], CurveVertices[triangleInd].Position[1], 0.0f, 1.0f });
@@ -943,32 +856,18 @@ void createObjects(void) {
 		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[10]);
 		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[10], TNBVertices, GL_STATIC_DRAW);
 
-		/*TriangleVertices[0].SetCoords(new float[4] {(TNBVertices[0].Position[0] + TNBVertices[1].Position[0]) / 2, (TNBVertices[0].Position[1] + TNBVertices[1].Position[1]) / 2, 0.0f, 1.0f});
-		TriangleVertices[1].SetCoords(new float[4] {(TNBVertices[2].Position[0] + TNBVertices[3].Position[0]) / 2, (TNBVertices[2].Position[1] + TNBVertices[3].Position[1]) / 2, 0.0f, 1.0f});
-		TriangleVertices[2].SetCoords(new float[4] {(TNBVertices[4].Position[0] + TNBVertices[5].Position[0]) / 2, (TNBVertices[4].Position[1] + TNBVertices[5].Position[1]) / 2, 0.0f, 1.0f});*/
+		TriangleVertices[0].SetCoords(CurveVertices[triangleInd].Position);
+		TriangleVertices[1].SetCoords(new float[4] { TriangleVertices[0].Position[0] - 0.25f * cosf(1.0472f), TriangleVertices[0].Position[1] + 0.25f * sinf(1.0472f), 0.0f, 1.0f });
+		TriangleVertices[2].SetCoords(new float[4] { TriangleVertices[0].Position[0] + 0.25f * cosf(1.0472f), TriangleVertices[0].Position[1] + 0.25f * sinf(1.0472f), 0.0f, 1.0f });
 
-		/*TriangleVertices[0].SetCoords(new float[4] { BiNormalVertices[triangleInd].Position[0], BiNormalVertices[triangleInd].Position[1], 1.0f, 1.0f});
-		TriangleVertices[1].SetCoords(new float[4] {TangentVertices[triangleInd].Position[0], TangentVertices[triangleInd].Position[1], 1.0f, 1.0f});
-		TriangleVertices[2].SetCoords(new float[4] {(TriangleVertices[0].Position[0] + TriangleVertices[1].Position[0]) / 2,
-			(TriangleVertices[0].Position[1] + TriangleVertices[1].Position[1]) / 2 + 0.5f, 1.0f, 1.0f});*/
-
-		float v1x, v2x, v3x, v1y, v2y, v3y;
-		int prevInd = triangleInd - 1;
-		if (triangleInd - 1 <= 0) {
-			prevInd = crFinalInd;
-		}
-		/*TriangleVertices[0].SetCoords(new float[4] {CurveVertices[prevInd].Position[0], CurveVertices[prevInd].Position[1], 0.0f, 1.0f});
-		TriangleVertices[1].SetCoords(new float[4] {CurveVertices[triangleInd].Position[0] - 0.25f, CurveVertices[triangleInd].Position[1] - 0.25f, 0.0f, 1.0f});
-		TriangleVertices[1].SetCoords(new float[4] {CurveVertices[triangleInd].Position[0] + 0.25f, CurveVertices[triangleInd].Position[1] + 0.25f, 0.0f, 1.0f});*/
-
-		/*glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[8]);
-		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[8], TriangleVertices, GL_STATIC_DRAW);*/
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[8]);
+		glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[8], TriangleVertices, GL_STATIC_DRAW);
 
 		if (key4Flag) {
-			ZYTriangleVertices[0].SetCoords(new float[4] {(ZYTNBVertices[0].Position[0] + ZYTNBVertices[1].Position[0]) / 2, (ZYTNBVertices[0].Position[1] + ZYTNBVertices[1].Position[1]) / 2, 0.0f, 1.0f});
-			ZYTriangleVertices[1].SetCoords(new float[4] {(ZYTNBVertices[2].Position[0] + ZYTNBVertices[3].Position[0]) / 2, (ZYTNBVertices[2].Position[1] + ZYTNBVertices[3].Position[1]) / 2, 0.0f, 1.0f});
-			ZYTriangleVertices[2].SetCoords(new float[4] {(ZYTNBVertices[4].Position[0] + ZYTNBVertices[5].Position[0]) / 2, (ZYTNBVertices[4].Position[1] + ZYTNBVertices[5].Position[1]) / 2, 0.0f, 1.0f});
-			
+			ZYTriangleVertices[0].SetCoords(ZYCurveVertices[triangleInd].Position);
+			ZYTriangleVertices[1].SetCoords(new float[4] { ZYTriangleVertices[0].Position[0] - 0.25f * cosf(1.0472f), ZYTriangleVertices[0].Position[1] + 0.25f * sinf(1.0472f), 0.0f, 1.0f });
+			ZYTriangleVertices[2].SetCoords(new float[4] { ZYTriangleVertices[0].Position[0] + 0.25f * cosf(1.0472f), ZYTriangleVertices[0].Position[1] + 0.25f * sinf(1.0472f), 0.0f, 1.0f });
+
 			glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[9]);
 			glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[9], ZYTriangleVertices, GL_STATIC_DRAW);
 
@@ -988,9 +887,9 @@ void createObjects(void) {
 		if (CurveVertices[triangleInd].Position[0] == 0.0f && CurveVertices[triangleInd].Position[1] == 0.0f)
 			triangleInd = 1;
 
-		cout << "setting triangle vertices: " << TriangleVertices[0].Position[0] << " " << TriangleVertices[0].Position[1] << ", " <<
+		/*cout << "setting triangle vertices: " << TriangleVertices[0].Position[0] << " " << TriangleVertices[0].Position[1] << ", " <<
 			TriangleVertices[1].Position[0] << " " << TriangleVertices[1].Position[1] << ", " <<
-			TriangleVertices[1].Position[0] << " " << TriangleVertices[1].Position[1] << endl;
+			TriangleVertices[1].Position[0] << " " << TriangleVertices[1].Position[1] << endl;*/
 	}
 
 	//frameCount = (frameCount + 1) % 2;
@@ -1068,10 +967,6 @@ void pickVertex(void) {
 	// Find a way to change color of selected vertex and
 	// store original color
 	prevColor = Vertices[gPickedIndex].Color;
-
-	if (gPickedIndex < IndexCount) {
-		cout << "click: " << Vertices[gPickedIndex].Position[2] << endl;
-	}
 	
 	// Uncomment these lines if you wan to see the picking shader in effect
 	//glfwSwapBuffers(window);
@@ -1138,14 +1033,6 @@ void renderScene(void) {
 	// Re-clear the screen for visible rendering
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	/*glBegin(GL_TRIANGLES);
-	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-	glVertex4f(0.0f, 0.0f, 0.0f, 1.0f);
-	glVertex4f(1.0f, 1.0f, 0.0f, 1.0f);
-	glVertex4f(1.0f, -1.0f, 0.0f, 1.0f);
-	glEnd();
-	glFlush();*/
-
 	glUseProgram(programID);
 	{
 		// see comments in pick
@@ -1205,9 +1092,7 @@ void renderScene(void) {
 			}
 
 			if (key5Flag) {
-				//cout << "RENDERING TRAINGLE KEY5: " << key5Flag << " AND KEY3FLAG: " << key3Flag << endl;
-				cout << "TRIANGLE VERTEX: " << TriangleVertices[0].Position[1] << endl;
-				cout << "RENDERING XY TRIANGLES" << endl;
+				//cout << "RENDERING XY TRIANGLES" << endl;
 				glBindVertexArray(VertexArrayId[10]);	// Draw Vertices
 				glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[10], TNBVertices);
 				glDrawElements(GL_LINES, NumIdcs[10], GL_UNSIGNED_SHORT, (void*)0);
@@ -1217,18 +1102,8 @@ void renderScene(void) {
 				glDrawElements(GL_TRIANGLES, NumIdcs[8], GL_UNSIGNED_SHORT, (void*)0);
 
 				if (key4Flag) {
-					cout << "RENDERING ZY TRIANGLES" << endl;
-					//glBegin(GL_TRIANGLES);
-					//glColor3f(1.0f, 1.0f, 1.0f);
-					///*glVertex2i(ZYTriangleVertices[0].Position[0], ZYTriangleVertices[0].Position[1]);
-					//glVertex2i(ZYTriangleVertices[1].Position[0], ZYTriangleVertices[1].Position[1]);
-					//glVertex2i(ZYTriangleVertices[2].Position[0], ZYTriangleVertices[2].Position[1]);*/
-					//glVertex2i(0.0f, 0.0f);
-					//glVertex2i(1.0f, 1.0f);
-					//glVertex2i(1.0f, -1.0f);
-					// ////glDrawArrays(GL_, 0, 3);
-					//glEnd();
-					//glFlush();
+					//cout << "RENDERING ZY TRIANGLES" << endl;
+
 					glBindVertexArray(VertexArrayId[11]);	// Draw Vertices
 					glBufferSubData(GL_ARRAY_BUFFER, 0, VertexBufferSize[11], ZYTNBVertices);
 					glDrawElements(GL_LINES, NumIdcs[11], GL_UNSIGNED_SHORT, (void*)0);
