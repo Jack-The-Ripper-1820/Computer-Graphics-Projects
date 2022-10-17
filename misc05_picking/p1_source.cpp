@@ -663,27 +663,6 @@ void createObjects(void) {
 			Vertices[i].SetCoords(new float[4] {cosf(angle) + 1, sinf(angle), 0.0f, 1.0f});
 			ZYVertices[i].SetCoords(new float[4] {cosf(angle), sinf(angle) - 1, 0.0f, 1.0f});
 		}
-		/*Vertices[0].SetCoords(new float[4] {0, 0.0f, 0.0f, 1.0f});
-		Vertices[1].SetCoords(new float[4] {0.809f, 0.588f, 0.0f, 1.0f});
-		Vertices[2].SetCoords(new float[4] {0.501f, 1.541f, 0.0f, 1.0f});
-		Vertices[3].SetCoords(new float[4] {-0.501f, 1.541f, 0.0f, 1.0f});
-		Vertices[4].SetCoords(new float[4] {-0.809f, 0.588f, 0.0f, 1.0f});
-		Vertices[5].SetCoords(new float[4] {0, 0.0f, 0.0f, 1.0f});
-		Vertices[6].SetCoords(new float[4] {0.809f, -0.588f, 0.0f, 1.0f});
-		Vertices[7].SetCoords(new float[4] {0.501f, -1.541f, 0.0f, 1.0f});
-		Vertices[8].SetCoords(new float[4] {-0.501f, -1.541f, 0.0f, 1.0f});
-		Vertices[9].SetCoords(new float[4] {-0.809f, -0.588f, 0.0f, 1.0f});
-
-		ZYVertices[0].SetCoords(new float[4] {0, 0.0f, 0.0f, 1.0f});
-		ZYVertices[1].SetCoords(new float[4] {0.809f, 0.588f, 0.0f, 1.0f});
-		ZYVertices[2].SetCoords(new float[4] {0.501f, 1.541f, 0.0f, 1.0f});
-		ZYVertices[3].SetCoords(new float[4] {-0.501f, 1.541f, 0.0f, 1.0f});
-		ZYVertices[4].SetCoords(new float[4] {-0.809f, 0.588f, 0.0f, 1.0f});
-		ZYVertices[5].SetCoords(new float[4] {0, 0.0f, 0.0f, 1.0f});
-		ZYVertices[6].SetCoords(new float[4] {0.809f, -0.588f, 0.0f, 1.0f});
-		ZYVertices[7].SetCoords(new float[4] {0.501f, -1.541f, 0.0f, 1.0f});
-		ZYVertices[8].SetCoords(new float[4] {-0.501f, -1.541f, 0.0f, 1.0f});
-		ZYVertices[9].SetCoords(new float[4] {-0.809f, -0.588f, 0.0f, 1.0f});*/
 
 		for (int i = 0; i < IndexCount; i++) {
 			swap(ZYVertices[i].Position[0], ZYVertices[i].Position[1]);
@@ -692,10 +671,7 @@ void createObjects(void) {
 			Vertices[i].Position[1] += 1;
 			ZYVertices[i].Position[1] -= 2.5;
 
-
 			swap(ZYVertices[i].Position[0], ZYVertices[i].Position[1]);
-
-			cout << "Initial ZY Coordinates: " << ZYVertices[i].Position[0] << ", " << ZYVertices[i].Position[1] << endl;
 		}
 
 		P.resize(6);
@@ -801,8 +777,6 @@ void createObjects(void) {
 			std::vector<float> P2Pos = { 0.0f, 0.0f, 0.0f, 1.f };
 			std::vector<float> P3Pos = { 0.0f, 0.0f, 0.0f, 1.f };
 
-			//cout << "before index check" << endl;
-
 			P1Pos = { P[k - 1][(i - 1 + n) % n].Position[0], P[k - 1][(i - 1 + n) % n].Position[1], 0.0f, 1.f };
 			P2Pos = { P[k - 1][i].Position[0], P[k - 1][i].Position[1], 0.0f, 1.f };
 			P3Pos = { P[k - 1][(i + 1) % n].Position[0], P[k - 1][(i + 1) % n].Position[1], 0.0f, 1.f };
@@ -886,21 +860,7 @@ void createObjects(void) {
 
 		if (CurveVertices[triangleInd].Position[0] == 0.0f && CurveVertices[triangleInd].Position[1] == 0.0f)
 			triangleInd = 1;
-
-		/*cout << "setting triangle vertices: " << TriangleVertices[0].Position[0] << " " << TriangleVertices[0].Position[1] << ", " <<
-			TriangleVertices[1].Position[0] << " " << TriangleVertices[1].Position[1] << ", " <<
-			TriangleVertices[1].Position[0] << " " << TriangleVertices[1].Position[1] << endl;*/
 	}
-
-	//frameCount = (frameCount + 1) % 2;
-
-	/*else {
-		TriangleVertices[0].SetCoords(CurveVertices[0].Position);
-		TriangleVertices[1].SetCoords(ZYCurveVertices[0].Position);
-		triangleInd = 0;
-	}*/
-	/*if(key3Flag) 
-		bindBuffers();*/
 
 	// ATTN: Project 1B, Task 1 == create line segments to connect the control points
 
@@ -1163,11 +1123,6 @@ static void mouseCallback(GLFWwindow* window, int button, int action, int mods) 
 			ZYVertices[gPickedIndex].SetColor(prevColor);
 
 			swap(ZYVertices[gPickedIndex].Position[0], ZYVertices[gPickedIndex].Position[1]);
-
-			//cout << "release: " << Vertices[gPickedIndex].Position[2] << endl;
-
-			//cout << "ZY coordinates of " << gPickedIndex << " : " << ZYVertices[gPickedIndex].Position[0] << ", " << ZYVertices[gPickedIndex].Position[1] << endl;
-
 		}
 
 		bindBuffers();
