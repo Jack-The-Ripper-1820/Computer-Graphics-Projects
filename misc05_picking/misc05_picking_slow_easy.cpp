@@ -58,12 +58,12 @@ void createVAOs(Vertex[], GLushort[], int);
 void loadObject(char*, glm::vec4, Vertex* &, GLushort* &, size_t &, int);
 void createObjects(void);
 void pickObject(void);
-void renderScene(void);
+void renderScene(float);
 void cleanup(void);
 static void keyCallback(GLFWwindow*, int, int, int, int);
 static void mouseCallback(GLFWwindow*, int, int, int);
 void translateObject(Vertex*& Verts, vec3 trans, int ObjectId, size_t VertCount);
-void rotatePen(mat4);
+void rotatePen(float);
 
 // GLOBAL VARIABLES
 GLFWwindow* window;
@@ -114,7 +114,7 @@ GLushort GridIndices[GridVertsCount];
 size_t BaseVertCount, PenVertCount, TopVertCount, Arm1VertCount, Arm2VertCount, ButtonVertCount, JointVertCount;
 Vertex* BaseVerts, *PenVerts, *TopVerts, *Arm1Verts, *Arm2Verts, *ButtonVerts, *JointVerts;
 
-bool bPress = false, pPress = false;
+bool bPress = false, pPress = false, shiftPress = false;
 
 int initWindow(void) {
 	// Initialise GLFW
@@ -460,7 +460,7 @@ void pickObject(void) {
 	//continue; // skips the normal rendering
 }
 
-void renderScene(void) {
+void renderScene(float deltaTime) {
 	//ATTN: DRAW YOUR SCENE HERE. MODIFY/ADAPT WHERE NECESSARY!
 
 	// Dark blue background
@@ -504,7 +504,7 @@ void renderScene(void) {
 		glDrawElements(GL_TRIANGLES, NumIdcs[6], GL_UNSIGNED_SHORT, (void*)0);
 
 		if (pPress) {
-			rotatePen(ModelMatrix);
+			rotatePen(deltaTime);
 		}
 
 		glBindVertexArray(VertexArrayId[7]);	// Draw Vertices
@@ -595,23 +595,76 @@ void translateObject(Vertex* &Verts, vec3 trans, int ObjectId, size_t VertCount)
 	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[ObjectId]);
 	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[ObjectId], Verts, GL_STATIC_DRAW);
 }
-void rotatePen(mat4 ModelMatrix) {
-	if (!pPress) return;
-	
-	if (pPress) {
-		//glm::mat4 ModelMatrix = glm::mat4(1.0f);
-		int i = PenVertCount / 2, j = i + 1;
-		vec3 vecMid = vec3(PenVerts[i].Position[0], PenVerts[i].Position[1], PenVerts[i].Position[2]);
-		vec3 vecNext = vec3(PenVerts[j].Position[0], PenVerts[j].Position[1], PenVerts[j].Position[2]);
-		vec3 vecPrev = glm::vec3(PenVerts[i - 1].Position[0], PenVerts[i - 1].Position[1], PenVerts[i - 1].Position[2]);
 
-		vec3 normal = cross(vecPrev - vecMid, vecMid - vecNext);
+vec3 avgPos(Vertex* Verts, const size_t VertCount) {
+	float sx = 0, sy = 0, sz = 0;
 
-		float norm = pow(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z, 0.5);
-		vec3 axis = vec3(normal.x / norm, normal.y / norm, normal.z / norm);
- 		ModelMatrix = glm::rotate(ModelMatrix, (float)glfwGetTime(), axis);
-		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+	for (int i = 0; i < VertCount; i++) {
+		sx += Verts[i].Position[0];
+		sy += Verts[i].Position[1];
+		sz += Verts[i].Position[2];
 	}
+	
+	return vec3(sx / VertCount, sy / VertCount, sz / VertCount);
+}
+
+vec3 avgNorm(Vertex* Verts, const size_t VertCount) {
+	float sx = 0, sy = 0, sz = 0;
+
+	for (int i = 0; i < VertCount; i++) {
+		sx += Verts[i].Normal[0];
+		sy += Verts[i].Normal[1];
+		sz += Verts[i].Normal[2];
+	}
+
+	return vec3(sx / VertCount, sy / VertCount, sz / VertCount);
+}
+
+float penTheta = 0;
+void rotatePen(float deltaTime) {
+	if (!pPress) return;
+
+	int lastInd = Arm2VertCount - 1, lastPind = PenVertCount - 1, pmid = lastPind / 2;
+	//vec3 axis = vec3(Arm2Verts[lastInd].Position[0] - PenVerts[lastPind].Position[0], Arm2Verts[lastInd].Position[1] - PenVerts[lastPind].Position[1], Arm2Verts[lastInd].Position[2] - PenVerts[lastPind].Position[2]);
+	vec3 trans = avgPos(PenVerts, PenVertCount);
+	vec3 axis = avgNorm(PenVerts, PenVertCount);
+
+	//axis = cross(axis, vec3(PenVerts[0].Position[0], PenVerts[0].Position[1], PenVerts[0].Position[2]));
+
+	glm:mat4 model = mat4(1.f);
+
+	/*glTranslatef(-trans.x, -trans.y, -trans.z);
+	glRotatef((float)glfwGetTime(), trans.x, trans.y, trans.z);
+	glTranslatef(trans.x, trans.y, trans.z);*/
+
+	if (glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) || glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+		cout << "shift pressed" << endl;
+		bool f = false;
+		if (glfwGetKey(window, GLFW_KEY_LEFT)) {
+			penTheta -= 1.f;
+			f = true;
+			cout << "left pressed" << endl;
+		}
+
+		else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
+			penTheta += 1.f;
+			f = true;
+			cout << "right pressed" << endl;
+		}
+
+		if (f) {
+			model = glm::translate(model, vec3(-trans.x, -trans.y, -trans.z));
+			model = glm::rotate(model, penTheta * 0.01f, normalize(trans));
+			model = glm::translate(model, vec3(trans.x, trans.y, trans.z));
+
+			////model = glm::scale(model, glm::vec3(0.1, 0.1, 0.1));
+			////model = glm::scale(model, glm::vec3(10, 10, 10));
+		}
+
+		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &model[0][0]);
+	}
+
+	//cout << PenVerts[0].Position[0] << " " << PenVerts[0].Position[1] << " " << PenVerts[0].Position[2] << endl;
 }
 
 void moveBase() {
@@ -658,12 +711,9 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 		{
 		case GLFW_KEY_P:
 			pPress = !pPress;
-			//rotatePen();
 			break;
 		case GLFW_KEY_B:
-			std::cout << "IS B PRESSED: " << bPress << std::endl; ;
 			bPress = !bPress;
-			moveBase();
 			break;
 		case GLFW_KEY_A:
 			break;
@@ -675,6 +725,12 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 			break;
 		case GLFW_KEY_SPACE:
 			break;
+		/*case GLFW_KEY_RIGHT_SHIFT:
+			if (pPress) shiftPress = !shiftPress;
+			break;
+		case GLFW_KEY_LEFT_SHIFT:
+			if (pPress) shiftPress = !shiftPress;
+			break;*/
 		default:
 			break;
 		}
@@ -688,8 +744,7 @@ static void mouseCallback(GLFWwindow* window, int button, int action, int mods) 
 	}
 }
 
-double lastTime = 0;
-float theta = asin(10 / sqrt(200)), phi = atan(1);
+
 int main(void) {
 	// TL
 	// ATTN: Refer to https://learnopengl.com/Getting-started/Transformations, https://learnopengl.com/Getting-started/Coordinate-Systems,
@@ -706,6 +761,9 @@ int main(void) {
 	// Initialize OpenGL pipeline
 	initOpenGL();
 
+	double lastTime = 0;
+	float theta = asin(10 / sqrt(200)), phi = atan(1);
+	const float radius = 10.0f;
 	// For speed computation
 	//double lastTime = glfwGetTime();
 	int nbFrames = 0;
@@ -721,11 +779,10 @@ int main(void) {
 			lastTime += 1.0;
 		}
 
-		const float radius = 10.0f;
 		if (glfwGetKey(window, GLFW_KEY_A)) {
 			/*float cenX = prevX - radius * sin(5.f);
 			float cenZ = prevZ - radius * cos(5.f)*/;
-			theta = theta - radians(0.1f);
+			theta -= radians(0.1f);
 			prevX = 0.0 + sin(theta) * cos(phi) * radius;
 			prevZ = 0.0 + cos(theta) * cos(phi) * radius;
 			//glm::mat4 view;
@@ -735,7 +792,7 @@ int main(void) {
 		if (glfwGetKey(window, GLFW_KEY_D)) {
 			/*float cenX = prevX - radius * sin(5.f);
 			float cenZ = prevZ - radius * cos(5.f)*/;
-			theta = theta + radians(0.1f);
+			theta += radians(0.1f);
 			prevX = 0.0 + sin(theta) * cos(phi) * radius;
 			prevZ = 0.0 + cos(theta) * cos(phi) * radius;
 			//glm::mat4 view;
@@ -745,7 +802,7 @@ int main(void) {
 		if (glfwGetKey(window, GLFW_KEY_W)) {
 			/*float cenX = prevX - radius * sin(5.f);
 			float cenZ = prevZ - radius * cos(5.f)*/;
-			phi = phi + radians(0.1f);
+			phi += radians(0.1f);
 			prevY = 0.0 + sin(phi) * radius;
 			prevZ = 0.0 + cos(theta) * cos(phi) * radius;
 			//glm::mat4 view;
@@ -755,7 +812,7 @@ int main(void) {
 		if (glfwGetKey(window, GLFW_KEY_S)) {
 			/*float cenX = prevX - radius * sin(5.f);
 			float cenZ = prevZ - radius * cos(5.f)*/;
-			phi = phi - radians(0.1f);
+			phi -= radians(0.1f);
 			prevY = 0.0 + sin(phi) * radius;
 			prevZ = 0.0 + cos(theta) * cos(phi) * radius;
 			//glm::mat4 view;
@@ -807,9 +864,6 @@ int main(void) {
 			gViewMatrix = glm::lookAt(glm::vec3(prevX, sinf(prevY) * 0.01, cosf(prevZ) * 0.001), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 		}*/
 
-		GLfloat vel = cameraMoveSpeed * deltaTime;
-		float r = sqrt(300);
-
 		//if (glfwGetKey(window, GLFW_KEY_UP)) {
 		//	cameraPos.y += r * cosf(radians(10.f)) * vel, cameraPos.z += r * sinf(radians(10.f)) * vel;
 		//	cameraUpdate();
@@ -847,12 +901,8 @@ int main(void) {
 			moveBase();
 		}
 
-		/*if (pPress) {
-			rotatePen();
-		}*/
-
 		// DRAWING POINTS
-		renderScene();
+		renderScene(deltaTime);
 
 	} // Check if the ESC key was pressed or the window was closed
 	while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
