@@ -15,6 +15,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/euler_angles.hpp>
 using namespace glm;
 using namespace std;
 // Include AntTweakBar
@@ -24,7 +25,7 @@ using namespace std;
 #include <common/controls.hpp>
 #include <common/objloader.hpp>
 #include <common/vboindexer.hpp>
-#include <common/tiny_obj_loader.h>
+#include <common/quaternion_utils.hpp>
 
 const int window_width = 1024, window_height = 768;
 
@@ -459,7 +460,19 @@ void pickObject(void) {
 	//glfwSwapBuffers(window);
 	//continue; // skips the normal rendering
 }
+bool lightPosFlag = false;
 
+void setUniforms(mat4& ModelMatrix) {
+	lightPosFlag = !lightPosFlag;
+	//glm::vec3 lightPos = vec3(gViewMatrix * glm::vec4(10, 10, 10, 1));
+	glm::vec3 lightPos = vec3(10, 10, 10);
+	//if(!lightPosFlag) lightPos = vec3(-10, 10, -10);
+	glUniform3f(LightID, lightPos.x, lightPos.y, lightPos.z);
+
+	glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &gViewMatrix[0][0]);
+	glUniformMatrix4fv(ProjMatrixID, 1, GL_FALSE, &gProjectionMatrix[0][0]);
+	glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+}
 void renderScene(float deltaTime) {
 	//ATTN: DRAW YOUR SCENE HERE. MODIFY/ADAPT WHERE NECESSARY!
 
@@ -470,12 +483,14 @@ void renderScene(float deltaTime) {
 
 	glUseProgram(programID);
 	{
-		glm::vec3 lightPos = glm::vec3(4, 4, 4);
+		glm::mat4x4 ModelMatrix = glm::mat4(1.0);
+		setUniforms(ModelMatrix);
+		/*glm::vec3 lightPos = glm::vec3(10, 10, 10);
 		glm::mat4x4 ModelMatrix = glm::mat4(1.0);
 		glUniform3f(LightID, lightPos.x, lightPos.y, lightPos.z);
 		glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &gViewMatrix[0][0]);
 		glUniformMatrix4fv(ProjMatrixID, 1, GL_FALSE, &gProjectionMatrix[0][0]);
-		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);*/
 
 		glBindVertexArray(VertexArrayId[0]);	// Draw CoordAxes
 		glDrawArrays(GL_LINES, 0, NumVerts[0]);
