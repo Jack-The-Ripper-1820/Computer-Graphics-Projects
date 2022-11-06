@@ -6,6 +6,7 @@
 #include <stack>   
 #include <sstream>
 #include <iostream>
+#include <unordered_map>
 // Include GLEW
 #include <GL/glew.h>
 // Include GLFW
@@ -64,8 +65,15 @@ void cleanup(void);
 static void keyCallback(GLFWwindow*, int, int, int, int);
 static void mouseCallback(GLFWwindow*, int, int, int);
 void translateObject(Vertex*& Verts, vec3 trans, int ObjectId, size_t VertCount, bool);
-void rotatePen(float);
-void moveBase(vec3 &);
+void rotatePen(float, mat4 &);
+void moveBase(vec3 &, float);
+void moveBase(float);
+void updateLight();
+void moveTop(float, mat4 &);
+vec3 avgPos(Vertex*, const size_t);
+void changeOpacity(Vertex*, const size_t, bool, string);
+
+unordered_map<string, float*> colorMap;
 
 // GLOBAL VARIABLES
 GLFWwindow* window;
@@ -116,7 +124,12 @@ GLushort GridIndices[GridVertsCount];
 size_t BaseVertCount, PenVertCount, TopVertCount, Arm1VertCount, Arm2VertCount, ButtonVertCount, JointVertCount, ProjVertCount;
 Vertex* BaseVerts, *PenVerts, *TopVerts, *Arm1Verts, *Arm2Verts, *ButtonVerts, *JointVerts, *ProjVerts, *InitProjVerts;
 
-bool bPress = false, pPress = false, shiftPress = false, cPress = false, sPress = false;
+bool bPress = false, pPress = false, shiftPress = false, cPress = false, sPress = false, tPress = false, onePress = false, twoPress = false;
+
+vec3 gOrientationTop;
+vec3 gOrientationPen;
+vec3 gOrientationArm1;
+vec3 gOrientationArm2;
 
 int initWindow(void) {
 	// Initialise GLFW
@@ -378,36 +391,43 @@ void createObjects(void) {
 	createVAOs(Verts, Idcs, 2);
 	BaseVerts = Verts;
 	BaseVertCount = VertCount;
+	colorMap["Base"] = new float[4] {255.0, 0.0, 0.0, 1.0};
 
 	loadObject("models/Top.obj", glm::vec4(255.0, 165.0, 0.0, 1.0), Verts, Idcs, VertCount, 3);
 	createVAOs(Verts, Idcs, 3);
 	TopVerts = Verts;
 	TopVertCount = VertCount;
+	colorMap["Top"] = new float[4] {255.0, 165.0, 0.0, 1.0};
 
 	loadObject("models/Arm1.obj", glm::vec4(0.0, 0.0, 255.0, 1.0), Verts, Idcs, VertCount, 4);
 	createVAOs(Verts, Idcs, 4);
 	Arm1Verts = Verts;
 	Arm1VertCount = VertCount;
+	colorMap["Arm1"] = new float[4] {0.0, 0.0, 255.0, 1.0};
 
 	loadObject("models/Joint.obj", glm::vec4(128.0, 0.0, 128.0, 1.0), Verts, Idcs, VertCount, 5);
 	createVAOs(Verts, Idcs, 5);
 	JointVerts = Verts;
 	JointVertCount = VertCount;
+	colorMap["Joint"] = new float[4] {128.0, 0.0, 128.0, 1.0};
 
 	loadObject("models/Arm2.obj", glm::vec4(173.0, 216.0, 230.0, 1.0), Verts, Idcs, VertCount, 6);
 	createVAOs(Verts, Idcs, 6);
 	Arm2Verts = Verts;
 	Arm2VertCount = VertCount;
+	colorMap["Arm2"] = new float[4] {173.0, 216.0, 230.0, 1.0};
 
 	loadObject("models/Pen.obj", glm::vec4(255.0, 255.0, 0.0, 1.0), Verts, Idcs, VertCount, 7);
 	createVAOs(Verts, Idcs, 7);
 	PenVerts = Verts;
 	PenVertCount = VertCount;
+	colorMap["Pen"] = new float[4] {255.0, 255.0, 0.0, 1.0};
 
 	loadObject("models/Button.obj", glm::vec4(255.0, 0.0, 0.0, 1.0), Verts, Idcs, VertCount, 8);
 	createVAOs(Verts, Idcs, 8);
 	ButtonVerts = Verts;
 	ButtonVertCount = VertCount;
+	colorMap["Button"] = new float[4] {255.0, 0.0, 0.0, 1.0};
 
 	loadObject("models/Projectile.obj", glm::vec4(125, 0, 125, 1.0), Verts, Idcs, VertCount, 9);
 	createVAOs(Verts, Idcs, 9);
@@ -478,12 +498,13 @@ void pickObject(void) {
 bool lightPosFlag = false;
 
 void setUniforms(mat4& ModelMatrix) {
-	lightPosFlag = !lightPosFlag;
+	//lightPosFlag = !lightPosFlag;
 	//glm::vec3 lightPos = vec3(gViewMatrix * glm::vec4(10, 10, 10, 1));
-	glm::vec3 lightPos = vec3(8, 10, 8);
+	/*glm::vec3 lightPos = vec3(8, 10, 8);
 	vec3 lightPos2 = vec3(-8, 10, -8);
 	vec3 lightPosArray[2] = { lightPos, lightPos2 };
-	glUniform3fv(LightID, 2, (GLfloat*)lightPosArray);
+	glUniform3fv(LightID, 2, (GLfloat*)lightPosArray);*/
+	updateLight();
 
 	glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &gViewMatrix[0][0]);
 	glUniformMatrix4fv(ProjMatrixID, 1, GL_FALSE, &gProjectionMatrix[0][0]);
@@ -492,7 +513,7 @@ void setUniforms(mat4& ModelMatrix) {
 
 float startTimeL = 0;
 
-void launchProjectile(float deltatime) {
+void launchProjectile(float deltatime, mat4 &ModelMatrix) {
 	//cout << "inside launch projectile" << endl;
 	vec3 Position1 = vec3(PenVerts[7].Position[0], PenVerts[7].Position[1], PenVerts[7].Position[2]);
 	vec3 Position2 = vec3(PenVerts[16].Position[0], PenVerts[16].Position[1], PenVerts[16].Position[2]);
@@ -521,7 +542,8 @@ void launchProjectile(float deltatime) {
 
 		if (ProjVerts[i].Position[1] <= 0) {
 			sPress = false;
-			moveBase(vec3(ProjVerts[i].Position[0], ProjVerts[i].Position[1], ProjVerts[i].Position[2]));
+			vec4 trans = ModelMatrix * vec4(ProjVerts[i].Position[0], ProjVerts[i].Position[1], ProjVerts[i].Position[2], 1);
+			moveBase(vec3(trans), deltatime);
 			break;
 		}
 	}
@@ -537,6 +559,52 @@ void launchProjectile(float deltatime) {
 
 }
 
+void moveTop(float deltatime, mat4 & ModelMatrix) {
+	//vec3 trans = avgPos(TopVerts, TopVertCount);
+	//glm::mat4 TranslationMatrix = translate(mat4(), -trans); // A bit to the left
+	//glm::mat4 TranslationMatrix1 = translate(mat4(), trans);
+
+	if (glfwGetKey(window, GLFW_KEY_LEFT)) {
+		gOrientationTop.y -= radians(90.f) * deltatime;
+	}
+
+	else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
+		gOrientationTop.y += radians(90.f) * deltatime;
+	}
+
+	/*mat4 RotationMatrix = eulerAngleYXZ(gOrientationTop.y, gOrientationTop.x, gOrientationTop.z);
+	ModelMatrix *= TranslationMatrix1 * RotationMatrix * TranslationMatrix;
+	glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);*/
+}
+
+void moveArm1(float deltatime) {
+	if (glfwGetKey(window, GLFW_KEY_LEFT)) {
+		float dx = gOrientationArm1.x - radians(90.f) * deltatime;
+		if (dx >= radians(-90.f) && dx <= radians(90.f))
+			gOrientationArm1.x = dx;
+	}
+
+	else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
+		float dx = gOrientationArm1.x + radians(90.f) * deltatime;
+		if (dx >= radians(-90.f) && dx <= radians(90.f))
+			gOrientationArm1.x = dx;
+	}
+}
+
+void moveArm2(float deltatime) {
+	if (glfwGetKey(window, GLFW_KEY_LEFT)) {
+		float dx = gOrientationArm2.x - radians(90.f) * deltatime;
+		if (dx >= radians(-45.f) && dx <= radians(225.f))
+			gOrientationArm2.x = dx;
+	}
+
+	else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
+		float dx = gOrientationArm2.x + radians(90.f) * deltatime;
+		if (dx >= radians(-45.f) && dx <= radians(225.f))
+			gOrientationArm2.x = dx;
+	}
+}
+
 void renderScene(float deltaTime) {
 	//ATTN: DRAW YOUR SCENE HERE. MODIFY/ADAPT WHERE NECESSARY!
 
@@ -548,6 +616,8 @@ void renderScene(float deltaTime) {
 	glUseProgram(programID);
 	{
 		glm::mat4x4 ModelMatrix = glm::mat4(1.0);
+
+
 		setUniforms(ModelMatrix);
 		/*glm::vec3 lightPos = glm::vec3(10, 10, 10);
 		glm::mat4x4 ModelMatrix = glm::mat4(1.0);
@@ -563,13 +633,50 @@ void renderScene(float deltaTime) {
 		glDrawArrays(GL_LINES, 0, NumVerts[1]);
 
 		glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
+		//glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
 		glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
+
+		vec3 trans = avgPos(TopVerts, TopVertCount);
+		glm::mat4 TranslationMatrix = translate(mat4(), -trans); // A bit to the left
+		glm::mat4 TranslationMatrix1 = translate(mat4(), trans);
+
+		if (tPress) {
+			moveTop(deltaTime, ModelMatrix);
+		}
+
+		mat4 RotationMatrix = eulerAngleYXZ(gOrientationTop.y, gOrientationTop.x, gOrientationTop.z);
+		ModelMatrix *= TranslationMatrix1 * RotationMatrix * TranslationMatrix;
+		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
 
 		glBindVertexArray(VertexArrayId[3]);	// Draw Vertices
 		glDrawElements(GL_TRIANGLES, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
 
+		//trans = avgPos(TopVerts, TopVertCount);
+		TranslationMatrix = translate(mat4(), -trans);
+		TranslationMatrix1 = translate(mat4(), trans);
+
+		if (onePress) {
+			moveArm1(deltaTime);
+		}
+
+		RotationMatrix = eulerAngleYXZ(gOrientationArm1.y, gOrientationArm1.x, gOrientationArm1.z);
+		ModelMatrix *= TranslationMatrix1 * RotationMatrix * TranslationMatrix;
+		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+
 		glBindVertexArray(VertexArrayId[4]);	// Draw Vertices
 		glDrawElements(GL_TRIANGLES, NumIdcs[4], GL_UNSIGNED_SHORT, (void*)0);
+
+		trans = avgPos(JointVerts, JointVertCount);
+		TranslationMatrix = translate(mat4(), -trans);
+		TranslationMatrix1 = translate(mat4(), trans);
+
+		if (twoPress) {
+			moveArm2(deltaTime);
+		}
+
+		RotationMatrix = eulerAngleYXZ(gOrientationArm2.y, gOrientationArm2.x, gOrientationArm2.z);
+		ModelMatrix *= TranslationMatrix1 * RotationMatrix * TranslationMatrix;
+		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
 
 		glBindVertexArray(VertexArrayId[5]);	// Draw Vertices
 		glDrawElements(GL_TRIANGLES, NumIdcs[5], GL_UNSIGNED_SHORT, (void*)0);
@@ -577,9 +684,17 @@ void renderScene(float deltaTime) {
 		glBindVertexArray(VertexArrayId[6]);	// Draw Vertices
 		glDrawElements(GL_TRIANGLES, NumIdcs[6], GL_UNSIGNED_SHORT, (void*)0);
 
+		trans = vec3(PenVerts[22].Position[0], PenVerts[22].Position[1], PenVerts[22].Position[2]);
+		TranslationMatrix = translate(mat4(), -trans); 
+		TranslationMatrix1 = translate(mat4(), trans);
+
 		if (pPress) {
-			rotatePen(deltaTime);
+			rotatePen(deltaTime, ModelMatrix);
 		}
+
+		RotationMatrix = eulerAngleYXZ(gOrientationPen.y, gOrientationPen.x, gOrientationPen.z);
+		ModelMatrix *= TranslationMatrix1 * RotationMatrix * TranslationMatrix;
+		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
 
 		glBindVertexArray(VertexArrayId[7]);	// Draw Vertices
 		glDrawElements(GL_TRIANGLES, NumIdcs[7], GL_UNSIGNED_SHORT, (void*)0);
@@ -591,7 +706,7 @@ void renderScene(float deltaTime) {
 		//glDrawElements(GL_TRIANGLES, NumIdcs[9], GL_UNSIGNED_SHORT, (void*)0);
 
 		if (sPress) {
-			launchProjectile(deltaTime);
+			launchProjectile(deltaTime, ModelMatrix);
 			glBindVertexArray(VertexArrayId[9]);	// Draw Vertices
 			glDrawElements(GL_TRIANGLES, NumIdcs[9], GL_UNSIGNED_SHORT, (void*)0);
 		}
@@ -621,7 +736,7 @@ void cleanup(void) {
 }
 
 void translateObject(Vertex* &Verts, vec3 trans, int ObjectId, size_t VertCount, bool fromPress = true) {
-	if(fromPress) trans *= 0.05;
+	//if(fromPress) trans *= deltatime;
 	for (int i = 0; i < VertCount; i++) {
 		vec4 vec(Verts[i].Position[0] + trans[0], Verts[i].Position[1] + trans[1], Verts[i].Position[2] + trans[2], Verts[i].Position[3]);
 		//std::cout <<"moved verts: " << vec.x << " " << vec.y << " " << vec.z << std::endl;
@@ -658,63 +773,95 @@ vec3 avgNorm(Vertex* Verts, const size_t VertCount) {
 }
 
 float penTheta = 0;
-void rotatePen(float deltaTime) {
+void rotatePen(float deltaTime, mat4& ModelMatrix) {
 	if (!pPress) return;
 
-	int lastInd = Arm2VertCount - 1, lastPind = PenVertCount - 1, pmid = lastPind / 2;
-	//vec3 axis = vec3(Arm2Verts[lastInd].Position[0] - PenVerts[lastPind].Position[0], Arm2Verts[lastInd].Position[1] - PenVerts[lastPind].Position[1], Arm2Verts[lastInd].Position[2] - PenVerts[lastPind].Position[2]);
-	vec3 trans = avgPos(PenVerts, PenVertCount);
-	vec3 axis = avgNorm(PenVerts, PenVertCount);
+	//int lastInd = Arm2VertCount - 1, lastPind = PenVertCount - 1, pmid = lastPind / 2;
+	////vec3 axis = vec3(Arm2Verts[lastInd].Position[0] - PenVerts[lastPind].Position[0], Arm2Verts[lastInd].Position[1] - PenVerts[lastPind].Position[1], Arm2Verts[lastInd].Position[2] - PenVerts[lastPind].Position[2]);
+	//vec3 trans = avgPos(PenVerts, PenVertCount);
+	//vec3 axis = avgNorm(PenVerts, PenVertCount);
 
-	//axis = cross(axis, vec3(PenVerts[0].Position[0], PenVerts[0].Position[1], PenVerts[0].Position[2]));
+	////axis = cross(axis, vec3(PenVerts[0].Position[0], PenVerts[0].Position[1], PenVerts[0].Position[2]));
 
-	glm:mat4 model = mat4(1.f);
+	//glm:mat4 model = mat4(1.f);
 
-	/*glTranslatef(-trans.x, -trans.y, -trans.z);
-	glRotatef((float)glfwGetTime(), trans.x, trans.y, trans.z);
-	glTranslatef(trans.x, trans.y, trans.z);*/
+	///*glTranslatef(-trans.x, -trans.y, -trans.z);
+	//glRotatef((float)glfwGetTime(), trans.x, trans.y, trans.z);
+	//glTranslatef(trans.x, trans.y, trans.z);*/
 
-	if (glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) || glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-		cout << "shift pressed" << endl;
-		bool f = false;
+	//if (glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) || glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+	//	cout << "shift pressed" << endl;
+	//	bool f = false;
+	//	if (glfwGetKey(window, GLFW_KEY_LEFT)) {
+	//		penTheta -= radians(5.f) * deltaTime;
+	//		f = true;
+	//		cout << "left pressed" << endl;
+	//	}
+
+	//	else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
+	//		penTheta += radians(5.f) * deltaTime;
+	//		f = true;
+	//		cout << "right pressed" << endl;
+	//	}
+
+	//	vec3 Position1 = vec3(PenVerts[7].Position[0], PenVerts[7].Position[1], PenVerts[7].Position[2]);
+	//	vec3 Position2 = vec3(PenVerts[16].Position[0], PenVerts[16].Position[1], PenVerts[16].Position[2]);
+
+	//	if (f) {
+	//		/*model = glm::translate(model, vec3(-trans.x, -trans.y, -trans.z));
+	//		model = glm::rotate(model, penTheta * 0.005f, normalize(Position1 - Position2));
+	//		model = glm::translate(model, vec3(trans.x, trans.y, trans.z));*/
+
+
+	//	}
+
+	//	glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &model[0][0]);
+	//}
+
+	//vec3 trans = avgPos(PenVerts, PenVertCount);
+	//glm::mat4 TranslationMatrix = translate(mat4(), -trans); // A bit to the left
+	//glm::mat4 TranslationMatrix1 = translate(mat4(), trans);
+
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT)) {
 		if (glfwGetKey(window, GLFW_KEY_LEFT)) {
-			penTheta -= 1.f;
-			f = true;
-			cout << "left pressed" << endl;
+			gOrientationPen.z -= radians(90.f) * deltaTime;
 		}
 
 		else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
-			penTheta += 1.f;
-			f = true;
-			cout << "right pressed" << endl;
+			gOrientationPen.z += radians(90.f) * deltaTime;
 		}
-
-		vec3 Position1 = vec3(PenVerts[7].Position[0], PenVerts[7].Position[1], PenVerts[7].Position[2]);
-		vec3 Position2 = vec3(PenVerts[16].Position[0], PenVerts[16].Position[1], PenVerts[16].Position[2]);
-
-		if (f) {
-			model = glm::translate(model, vec3(-trans.x, -trans.y, -trans.z));
-			//model = glm::translate(model, vec3(-trans.x, , ));
-			model = glm::rotate(model, penTheta * 0.005f, normalize(Position1 - Position2));
-			//gOrientation1.y += 3.14159f / 2.0f * deltaTime;
-
-			// Build the model matrix
-			//glm::mat4 RotationMatrix = eulerAngleYXZ(gOrientation1.y, gOrientation1.x, gOrientation1.z);
-			model = glm::translate(model, vec3(trans.x, trans.y, trans.z));
-
-			////model = glm::scale(model, glm::vec3(0.1, 0.1, 0.1));
-			////model = glm::scale(model, glm::vec3(10, 10, 10));
-		}
-
-		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &model[0][0]);
 	}
 
-	//cout << PenVerts[0].Position[0] << " " << PenVerts[0].Position[1] << " " << PenVerts[0].Position[2] << endl;
+	else {
+		if (glfwGetKey(window, GLFW_KEY_LEFT)) {
+			gOrientationPen.y -= radians(90.f) * deltaTime;
+		}  
+
+		else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
+			gOrientationPen.y += radians(90.f) * deltaTime;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_UP)) {
+			gOrientationPen.x -= radians(90.f) * deltaTime;
+		}
+
+		else if (glfwGetKey(window, GLFW_KEY_DOWN)) {
+			gOrientationPen.x += radians(90.f) * deltaTime;
+		}
+	} 
+
+	/*mat4 RotationMatrix = eulerAngleYXZ(gOrientationPen.y, gOrientationPen.x, gOrientationPen.z);
+	ModelMatrix *= TranslationMatrix1 * RotationMatrix * TranslationMatrix;
+	glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);*/
+
+	//cout << PenVerts[0].Position[0] << " " << PenVerts[0].Position[1] << " " << PenVerts[0].Position[2] << endl; 
 }
 
-void moveBase(vec3& trans) {
+void moveBase(vec3& trans, float deltatime) {
 	trans = trans - avgPos(BaseVerts, BaseVertCount);
 	trans.y = 0;
+
+	//trans *= deltatime;
 	translateObject(BaseVerts, trans, 2, BaseVertCount, false);
 	translateObject(TopVerts, trans, 3, TopVertCount, false);
 	translateObject(Arm1Verts, trans, 4, Arm1VertCount, false);
@@ -725,29 +872,30 @@ void moveBase(vec3& trans) {
 	translateObject(ProjVerts, trans, 9, ProjVertCount, false);
 	translateObject(InitProjVerts, trans, -1, ProjVertCount, false);
 }
-void moveBase() {
+
+void moveBase(float deltatime) {
 	if (!bPress) return;
 	
 	vec3 trans;
 
 	if (glfwGetKey(window, GLFW_KEY_LEFT)) {
 		//std::cout << "KeyPressed" << std::endl;
-		trans = vec3(-1.0f, 0.0f, 0.0f);
+		trans = vec3(-1.0f, 0.0f, 0.0f) * deltatime * 5.f;
 	}
 
 	else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
 		//std::cout << "KeyPressed" << std::endl;
-		trans = vec3(1.0f, 0.0f, 0.0f);
+		trans = vec3(1.0f, 0.0f, 0.0f) * deltatime * 5.f;
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_UP)) {
 		//std::cout << "KeyPressed" << std::endl;
-		trans = vec3(0.0f, 0.0f, -1.0f);
+		trans = vec3(0.0f, 0.0f, -1.0f) * deltatime * 5.f;
 	}
 
 	else if (glfwGetKey(window, GLFW_KEY_DOWN)) {
 		//std::cout << "KeyPressed" << std::endl;
-		trans = vec3(0.0f, 0.0f, 1.0f);
+		trans = vec3(0.0f, 0.0f, 1.0f) * deltatime * 5.f;
 	}
 
 	//std::cout << vec.x << " " << vec.y <<" " <<  vec.z << std::endl;
@@ -767,6 +915,7 @@ void resetProjectile() {
 		ProjVerts[i].SetPosition(InitProjVerts[i].Position);
 	}
 }
+
 float prevX = 10.f, prevZ = 10.f, prevY = 10.f;
 // Alternative way of triggering functions on keyboard events
 static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -776,9 +925,11 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 		{
 		case GLFW_KEY_P:
 			pPress = !pPress;
+			//changeOpacity(PenVerts, PenVertCount, pPress, "Pen");
 			break;
 		case GLFW_KEY_B:
 			bPress = !bPress;
+			//changeOpacity(BaseVerts, BaseVertCount, bPress, "Base");
 			break;
 		case GLFW_KEY_C:
 			cPress = !cPress;
@@ -788,11 +939,17 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 			if (!sPress) startTimeL = glfwGetTime();
 			sPress = !sPress;
 			break;
-		case GLFW_KEY_A:
+		case GLFW_KEY_T:
+			tPress = !tPress;
+			//changeOpacity(TopVerts, TopVertCount, tPress, "Top");
 			break;
-		case GLFW_KEY_D:
+		case GLFW_KEY_1:
+			onePress = !onePress;
+			//changeOpacity(Arm1Verts, Arm1VertCount, onePress, "Arm1");
 			break;
-		case GLFW_KEY_W:
+		case GLFW_KEY_2:
+			twoPress = !twoPress;
+			//changeOpacity(Arm2Verts, Arm2VertCount, twoPress, "Arm2");
 			break;
 		case GLFW_KEY_SPACE:
 			break;
@@ -818,13 +975,36 @@ static void mouseCallback(GLFWwindow* window, int button, int action, int mods) 
 float theta = atan(1), phi = atan(1);
 const float radius = 10.0f;
 
+void updateLight() {
+	glm::vec3 lightPos = vec3(cameraPos.x - 2, cameraPos.y, cameraPos.z - 2);
+	vec3 lightPos2 = vec3(cameraPos.x + 2, cameraPos.y, cameraPos.z - 2);
+	vec3 lightPosArray[2] = { lightPos, lightPos2 };
+	glUniform3fv(LightID, 2, (GLfloat*)lightPosArray);
+}
+
+void changeOpacity(Vertex* Verts, const size_t VertCount, bool f, string type) {
+	cout << "IN OPACITY " << endl;
+	float* prevColor = colorMap[type];
+	for (int i = 0; i < VertCount; i++) {
+		if (f)
+			Verts[i].SetColor(new float[4] {prevColor[0] + 100, prevColor[1] + 100, prevColor[2] + 100, 1});
+		else
+			Verts[i].SetColor(prevColor);
+	}
+
+	cout << BaseVerts[0].Color[0] << " " << BaseVerts[0].Color[1] << " " << BaseVerts[0].Color[2] << " " << endl;
+}
+
 void moveCamera() {
+	if (!cPress) return;
+
 	if (glfwGetKey(window, GLFW_KEY_LEFT)) {
 		/*float cenX = prevX - radius * sin(5.f);
 		float cenZ = prevZ - radius * cos(5.f)*/;
 		theta -= radians(0.1f);
 		prevX = 0.0 + sin(theta) * cos(phi) * radius;
 		prevZ = 0.0 + cos(theta) * cos(phi) * radius;
+		cameraPos = vec3(prevX, prevY, prevZ);
 		//glm::mat4 view;
 		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 	}
@@ -835,6 +1015,7 @@ void moveCamera() {
 		theta += radians(0.1f);
 		prevX = 0.0 + sin(theta) * cos(phi) * radius;
 		prevZ = 0.0 + cos(theta) * cos(phi) * radius;
+		cameraPos = vec3(prevX, prevY, prevZ);
 		//glm::mat4 view;
 		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 	}
@@ -845,6 +1026,7 @@ void moveCamera() {
 		phi += radians(0.1f);
 		prevY = 0.0 + sin(phi) * radius;
 		prevZ = 0.0 + cos(theta) * cos(phi) * radius;
+		cameraPos = vec3(prevX, prevY, prevZ);
 		//glm::mat4 view;
 		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 	}
@@ -855,9 +1037,11 @@ void moveCamera() {
 		phi -= radians(0.1f);
 		prevY = 0.0 + sin(phi) * radius;
 		prevZ = 0.0 + cos(theta) * cos(phi) * radius;
+		cameraPos = vec3(prevX, prevY, prevZ);
 		//glm::mat4 view;
 		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 	}
+	//updateLight();
 }
 
 int main(void) {
@@ -897,9 +1081,14 @@ int main(void) {
 		}
 
 		if (bPress) {
-			moveBase();
+			moveBase(deltaTime);
 		}
 
+		/*changeOpacity(BaseVerts, BaseVertCount, bPress, "Base");
+		changeOpacity(TopVerts, TopVertCount, tPress, "Top");
+		changeOpacity(Arm1Verts, Arm1VertCount, onePress, "Arm1");
+		changeOpacity(Arm2Verts, Arm2VertCount, twoPress, "Arm2");
+		changeOpacity(PenVerts, PenVertCount, pPress, "Pen");*/
 		// DRAWING POINTS
 		renderScene(deltaTime);
 		lastTime = currentTime;

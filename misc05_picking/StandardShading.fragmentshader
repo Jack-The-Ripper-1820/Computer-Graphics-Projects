@@ -22,7 +22,7 @@ void main() {
 	//color = vs_vertexColor.rgb;
 
 	vec3 LightColor = vec3(1,1,1);
-	float LightPower = 350.0f;
+	float LightPower = 75.0f;
 
 
 	vec3 MaterialDiffuseColor = vs_vertexColor.rgb;
