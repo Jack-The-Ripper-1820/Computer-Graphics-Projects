@@ -430,14 +430,14 @@ void pickObject(void) {
 
 	glUseProgram(pickingProgramID);
 	{
-		glm::mat4 ModelMatrix = glm::mat4(1.0); // TranslationMatrix * RotationMatrix;
-		glm::mat4 MVP = gProjectionMatrix * gViewMatrix * ModelMatrix;
+			glm::mat4 ModelMatrix = glm::mat4(1.0); // TranslationMatrix * RotationMatrix;
+			glm::mat4 MVP = gProjectionMatrix * gViewMatrix * ModelMatrix;
 
-		// Send our transformation to the currently bound shader, in the "MVP" uniform
-		glUniformMatrix4fv(PickingMatrixID, 1, GL_FALSE, &MVP[0][0]);
+			// Send our transformation to the currently bound shader, in the "MVP" uniform
+			glUniformMatrix4fv(PickingMatrixID, 1, GL_FALSE, &MVP[0][0]);
 
-		// ATTN: DRAW YOUR PICKING SCENE HERE. REMEMBER TO SEND IN A DIFFERENT PICKING COLOR FOR EACH OBJECT BEFOREHAND
-		glBindVertexArray(0);
+			// ATTN: DRAW YOUR PICKING SCENE HERE. REMEMBER TO SEND IN A DIFFERENT PICKING COLOR FOR EACH OBJECT BEFOREHAND
+			glBindVertexArray(0);
 	}
 	glUseProgram(0);
 	// Wait until all the pending drawing commands are really done.
@@ -459,14 +459,15 @@ void pickObject(void) {
 	glReadPixels(xpos, window_height - ypos, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, data); // OpenGL renders with (0,0) on bottom, mouse reports with (0,0) on top
 
 	// Convert the color back to an integer ID
-	gPickedIndex = int(data[0]);
+	gPickedIndex = int(data[0] + data[1] * 256 +
+		data[2] * 256 * 256);
 
 	if (gPickedIndex == 255) { // Full white, must be the background !
 		gMessage = "background";
 	}
 	else {
 		std::ostringstream oss;
-		oss << "point " << gPickedIndex;
+		oss << "mesh " << gPickedIndex;
 		gMessage = oss.str();
 	}
 
@@ -479,9 +480,10 @@ bool lightPosFlag = false;
 void setUniforms(mat4& ModelMatrix) {
 	lightPosFlag = !lightPosFlag;
 	//glm::vec3 lightPos = vec3(gViewMatrix * glm::vec4(10, 10, 10, 1));
-	glm::vec3 lightPos = vec3(10, 10, 10);
-	//if(!lightPosFlag) lightPos = vec3(-10, 10, -10);
-	glUniform3f(LightID, lightPos.x, lightPos.y, lightPos.z);
+	glm::vec3 lightPos = vec3(8, 10, 8);
+	vec3 lightPos2 = vec3(-8, 10, -8);
+	vec3 lightPosArray[2] = { lightPos, lightPos2 };
+	glUniform3fv(LightID, 2, (GLfloat*)lightPosArray);
 
 	glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &gViewMatrix[0][0]);
 	glUniformMatrix4fv(ProjMatrixID, 1, GL_FALSE, &gProjectionMatrix[0][0]);
