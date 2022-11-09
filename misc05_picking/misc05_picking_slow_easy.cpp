@@ -572,7 +572,8 @@ void renderScene(float deltaTime) {
 		glDrawArrays(GL_LINES, 0, NumVerts[0]);
 
 		glBindVertexArray(VertexArrayId[1]);	// Draw Grid
-		glDrawArrays(GL_POINTS, 0, NumVerts[1]); 
+		//glDrawArrays(GL_POINTS, 0, NumVerts[1]); 
+		glDrawArrays(GL_LINES, 0, NumVerts[1]);
 		
 
 		glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
