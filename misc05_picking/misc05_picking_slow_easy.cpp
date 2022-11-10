@@ -118,7 +118,11 @@ Vertex GridVerts[GridVertsCount];
 GLushort GridIndices[GridVertsCount];
 
 size_t BaseVertCount, PenVertCount, TopVertCount, Arm1VertCount, Arm2VertCount, ButtonVertCount, JointVertCount, ProjVertCount;
-Vertex* BaseVerts, *PenVerts, *TopVerts, *Arm1Verts, *Arm2Verts, *ButtonVerts, *JointVerts, *ProjVerts, *InitProjVerts;
+Vertex* BaseVerts, * PenVerts, * TopVerts, * Arm1Verts, * Arm2Verts, * ButtonVerts, * JointVerts, * ProjVerts, * InitProjVerts;
+
+const size_t BezierVertsCount = 1200;
+Vertex BezierVerts[BezierVertsCount];
+GLushort BezierIndices[BezierVertsCount];
 
 bool bPress = false, pPress = false, shiftPress = false, cPress = false, sPress = false, tPress = false, onePress = false, twoPress = false;
 
@@ -126,6 +130,8 @@ vec3 gOrientationTop;
 vec3 gOrientationPen;
 vec3 gOrientationArm1;
 vec3 gOrientationArm2;
+
+float* PickingColors[NumObjects];
 
 int initWindow(void) {
 	// Initialise GLFW
@@ -414,6 +420,14 @@ void createObjects(void) {
 		InitProjVerts[i].SetColor(ProjVerts[i].Color);
 		InitProjVerts[i].SetNormal(ProjVerts[i].Normal);
 	}
+
+	/*for (int i = 2; i < NumObjects; i++) {
+		float r = (i & 0x000000FF) >> 0;
+		float g = (i & 0x0000FF00) >> 8;
+		float b = (i & 0x00FF0000) >> 16;
+
+		PickingColors[i] = new float[4] {r, g, b, 1};
+	}*/
 }
 
 void pickObject(void) {
@@ -471,7 +485,52 @@ void pickObject(void) {
 	//continue; // skips the normal rendering
 }
 
+float t = 0, minY = 200;
+int ind = 0;
+
+vec4 P0;
+vec4 P2;
+vec4 P1;
 float startTimeL = 0;
+
+void bezierProjectile(float deltatime, mat4 &ModelMatrix) {
+	//glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+
+	vec4 ProjPos = vec4(avgPos(ProjVerts, ProjVertCount), 1);
+
+	if (minY <= ModelMatrix[3][1]) {
+		sPress = false;
+		ProjPos = ModelMatrix * ProjPos;
+		moveBase(vec3(ProjPos), deltatime);
+		minY = 200, ind = 0, t = 0;
+		return;
+	}
+
+	float Cx = P1.x + (1 - t) * (1 - t) * (P0.x - P1.x) + t * t * (P2.x - P1.x);
+	float Cy = P1.y + (1 - t) * (1 - t) * (P0.y - P1.y) + t * t * (P2.y - P1.y);
+	float Cz = P1.z + (1 - t) * (1 - t) * (P0.z - P1.z) + t * t * (P2.z - P1.z);
+
+	BezierVerts[ind].SetPosition(new float[4] {Cx, Cy, Cz, 1});
+	//vec3 ProjPos = avgPos(ProjVerts, ProjVertCount);
+	float dx = Cx - ProjPos.x, dy = Cy - ProjPos.y, dz = Cz - ProjPos.z;   
+	minY = std::min(minY, Cy);
+	//cout << "Cuve coords: " << Cx << " " << Cy << " " << Cz << endl;
+
+	for (int i = 0; i < ProjVertCount; i++) {
+		ProjVerts[i].Position[0] += dx;
+		ProjVerts[i].Position[1] += dy;
+		ProjVerts[i].Position[2] += dz;
+	}
+
+	//cout << ProjVerts[0].Position[0] << " " << ProjVerts[0].Position[1] << " " << ProjVerts[0].Position[2] << endl;
+
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[9]);
+	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[9], ProjVerts, GL_STATIC_DRAW);
+
+	ind++;
+	t += 0.001 * 0.5 * 9.8 * (glfwGetTime() - startTimeL);
+}
+
 
 void launchProjectile(float deltatime, mat4 &ModelMatrix) {
 	vec4 Position1 = vec4(PenVerts[7].Position[0], PenVerts[7].Position[1], PenVerts[7].Position[2], 1);
@@ -572,8 +631,8 @@ void renderScene(float deltaTime) {
 		glDrawArrays(GL_LINES, 0, NumVerts[0]);
 
 		glBindVertexArray(VertexArrayId[1]);	// Draw Grid
-		//glDrawArrays(GL_POINTS, 0, NumVerts[1]); 
-		glDrawArrays(GL_LINES, 0, NumVerts[1]);
+		glDrawArrays(GL_LINES, 0, NumVerts[1]); 
+		//glDrawArrays(GL_POINTS, 0, NumVerts[1]);
 		
 
 		glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
@@ -647,9 +706,11 @@ void renderScene(float deltaTime) {
 		glDrawElements(GL_TRIANGLES, NumIdcs[8], GL_UNSIGNED_SHORT, (void*)0);
 
 		if (sPress) {
-			launchProjectile(deltaTime, ModelMatrix);
-			glBindVertexArray(VertexArrayId[9]);	// Draw Vertices
-			glDrawElements(GL_TRIANGLES, NumIdcs[9], GL_UNSIGNED_SHORT, (void*)0);
+			
+				//launchProjectile(deltaTime, ModelMatrix);
+				bezierProjectile(deltaTime, ModelMatrix);
+				glBindVertexArray(VertexArrayId[9]);	// Draw Vertices
+				glDrawElements(GL_TRIANGLES, NumIdcs[9], GL_UNSIGNED_SHORT, (void*)0);
 		}
 		glBindVertexArray(0);
 	}
@@ -783,7 +844,7 @@ void resetProjectile() {
 	for (int i = 0; i < ProjVertCount; i++) {
 		ProjVerts[i].SetPosition(InitProjVerts[i].Position);
 	}
-}
+} 
 
 float prevX = 10.f, prevZ = 10.f, prevY = 10.f;
 // Alternative way of triggering functions on keyboard events
@@ -805,8 +866,24 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 			break;
 		case GLFW_KEY_S:
 			resetProjectile();
-			if (!sPress) startTimeL = glfwGetTime();
+			//startTimeL = glfwGetTime();
 			sPress = !sPress;
+			if (!sPress) {
+				minY = 100;
+				ind = 0;
+				t = 0;
+			}
+			else {
+				P0 = vec4(PenVerts[7].Position[0], PenVerts[7].Position[1], PenVerts[7].Position[2], 1);
+				P2 = vec4(P0.x, P0.y - 20, P0.z, 1);
+				P1 = vec4(P0.x, P0.y - 2, P0.z - 10, 1);
+				startTimeL = glfwGetTime();
+				//P1 = P0 - vec4(PenVerts[16].Position[0], PenVerts[16].Position[1], PenVerts[16].Position[2], 1);
+				//vec4 N = normalize(P1);
+				//P1 += 3.f * N;
+				cout << P0.z << " " << P1.z << endl;
+				//cout << P1.x << P1.y << P1.z << endl;
+			}
 			break;
 		case GLFW_KEY_T:
 			tPress = !tPress;
