@@ -6,6 +6,7 @@
 #include <stack>   
 #include <sstream>
 #include <iostream>
+#include <unordered_map>
 // Include GLEW
 #include <GL/glew.h>
 // Include GLFW
@@ -15,7 +16,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/euler_angles.hpp>
 using namespace glm;
+using namespace std;
 // Include AntTweakBar
 #include <AntTweakBar.h>
 
@@ -23,6 +26,7 @@ using namespace glm;
 #include <common/controls.hpp>
 #include <common/objloader.hpp>
 #include <common/vboindexer.hpp>
+#include <common/quaternion_utils.hpp>
 
 const int window_width = 1024, window_height = 768;
 
@@ -53,13 +57,21 @@ typedef struct Vertex {
 int initWindow(void);
 void initOpenGL(void);
 void createVAOs(Vertex[], GLushort[], int);
-void loadObject(char*, glm::vec4, Vertex* &, GLushort* &, int);
+void loadObject(char*, glm::vec4, Vertex* &, GLushort* &, size_t &, int);
 void createObjects(void);
 void pickObject(void);
-void renderScene(void);
+void renderScene(float);
 void cleanup(void);
 static void keyCallback(GLFWwindow*, int, int, int, int);
 static void mouseCallback(GLFWwindow*, int, int, int);
+void translateObject(Vertex*& Verts, vec3 trans, int ObjectId, size_t VertCount);
+void rotatePen(float, mat4 &);
+void moveBase(vec3 &, float);
+void moveBase(float);
+void updateLight();
+void moveTop(float, mat4 &);
+vec3 avgPos(Vertex*, const size_t);
+void changeOpacity(Vertex*, const size_t, bool, int);
 
 // GLOBAL VARIABLES
 GLFWwindow* window;
@@ -73,7 +85,7 @@ std::string gMessage;
 GLuint programID;
 GLuint pickingProgramID;
 
-const GLuint NumObjects = 2;	// ATTN: THIS NEEDS TO CHANGE AS YOU ADD NEW OBJECTS
+const GLuint NumObjects = 10;	// ATTN: THIS NEEDS TO CHANGE AS YOU ADD NEW OBJECTS
 GLuint VertexArrayId[NumObjects];
 GLuint VertexBufferId[NumObjects];
 GLuint IndexBufferId[NumObjects];
@@ -92,7 +104,7 @@ GLuint PickingMatrixID;
 GLuint pickingColorID;
 GLuint LightID;
 
-glm::vec3 cameraPos, cameraTarget, cameraDirection, up, cameraRight, cameraUp, cameraFront;
+glm::vec3 cameraPos, worldUp;
 
 // Declare global objects
 // TL
@@ -102,6 +114,20 @@ Vertex CoordVerts[CoordVertsCount];
 const size_t GridVertsCount = 12 * 12;
 Vertex GridVerts[GridVertsCount];
 GLushort GridIndices[GridVertsCount];
+
+size_t BaseVertCount, PenVertCount, TopVertCount, Arm1VertCount, Arm2VertCount, ButtonVertCount, JointVertCount, ProjVertCount;
+Vertex* BaseVerts, * PenVerts, * TopVerts, * Arm1Verts, * Arm2Verts, * ButtonVerts, * JointVerts, * ProjVerts, * InitProjVerts;
+
+const size_t BezierVertsCount = 1200;
+Vertex BezierVerts[BezierVertsCount];
+GLushort BezierIndices[BezierVertsCount];
+
+bool bPress = false, pPress = false, shiftPress = false, cPress = false, sPress = false, tPress = false, onePress = false, twoPress = false;
+
+vec3 gOrientationTop;
+vec3 gOrientationPen;
+vec3 gOrientationArm1;
+vec3 gOrientationArm2;
 
 int initWindow(void) {
 	// Initialise GLFW
@@ -155,13 +181,8 @@ void initOpenGL(void) {
 	// Cull triangles which normal is not towards the camera
 	glEnable(GL_CULL_FACE);
 
-	cameraPos = glm::vec3(10.0f, 10.0f, 10.0f);
-	cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-	cameraDirection = glm::normalize(cameraPos - cameraTarget);
-	up = glm::vec3(0.0, 1.0, 0.0);
-	cameraRight = glm::normalize(glm::cross(up, cameraDirection));
-	cameraUp = glm::cross(cameraDirection, cameraRight);
-	cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+	cameraPos = vec3(10.0f, 10.0f, 10.0f);
+	worldUp = vec3(0.0, 1.0, 0.0);
 
 	// Projection matrix : 45° Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
 	gProjectionMatrix = glm::perspective(45.0f, 4.0f / 3.0f, 0.1f, 100.0f);
@@ -169,14 +190,16 @@ void initOpenGL(void) {
 	//gProjectionMatrix = glm::ortho(-4.0f, 4.0f, -3.0f, 3.0f, 0.0f, 100.0f); // In world coordinates
 
 	// Camera matrix
-	gViewMatrix = glm::lookAt(glm::vec3(10.0, 10.0, 10.0f),	// eye
+	//gViewMatrix = glm::lookAt(glm::vec3(10.0, 10.0, 10.0f),	// eye
+	//	glm::vec3(0.0, 0.0, 0.0),	// center
+	//	glm::vec3(0.0, 1.0, 0.0));	// up
+	
+	gViewMatrix = glm::lookAt(cameraPos,	// eye
 		glm::vec3(0.0, 0.0, 0.0),	// center
-		glm::vec3(0.0, 1.0, 0.0));	// up
+		worldUp);	// up
 
-	//gViewMatrix = glm::lookAt(cameraPos, cameraTarget, up);
-
-	//gViewMatrix = glm::lookAt(cameraPos, cameraFront, cameraUp);
-
+	updateLight();
+	
 	// Create and compile our GLSL program from the shaders
 	programID = LoadShaders("StandardShading.vertexshader", "StandardShading.fragmentshader");
 	pickingProgramID = LoadShaders("Picking.vertexshader", "Picking.fragmentshader");
@@ -254,7 +277,7 @@ void createVAOs(Vertex Vertices[], unsigned short Indices[], int ObjectId) {
 }
 
 // Ensure your .obj files are in the correct format and properly loaded by looking at the following function
-void loadObject(char* file, glm::vec4 color, Vertex* &out_Vertices, GLushort* &out_Indices, int ObjectId) {
+void loadObject(char* file, glm::vec4 color, Vertex* &out_Vertices, GLushort* &out_Indices, size_t &VertCount, int ObjectId) {
 	// Read our .obj file
 	std::vector<glm::vec3> vertices;
 	std::vector<glm::vec2> uvs;
@@ -269,6 +292,7 @@ void loadObject(char* file, glm::vec4 color, Vertex* &out_Vertices, GLushort* &o
 
 	const size_t vertCount = indexed_vertices.size();
 	const size_t idxCount = indices.size();
+	VertCount = vertCount;
 
 	// populate output arrays
 	out_Vertices = new Vertex[vertCount];
@@ -287,39 +311,6 @@ void loadObject(char* file, glm::vec4 color, Vertex* &out_Vertices, GLushort* &o
 	VertexBufferSize[ObjectId] = sizeof(out_Vertices[0]) * vertCount;
 	IndexBufferSize[ObjectId] = sizeof(GLushort) * idxCount;
 }
-
-//float sens = 1.0f;
-//bool isCPress = false, isRightPress = false, isLeftPress = false;
-//
-//static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
-//{
-//	/*if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS)
-//		isCPress = !isCPress;*/
-//	const float cameraSpeed = 0.5f; // adjust accordingly
-//	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-//		cameraPos += cameraSpeed * cameraFront;
-//	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-//		cameraPos -= cameraSpeed * cameraFront;
-//	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-//		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-//	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-//		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-//}
-//
-//float camX  = 10, camZ = 10;
-//
-//void cameraMove() {
-//	gViewMatrix = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-//	/*std::cout << "CPressed: " << isCPress << std::endl;
-//	if (!isCPress) return;
-//
-//	const float radius = 10.0f * sens;
-//	
-//	camX = sin(glfwGetTime()) * radius;
-//	camZ = cos(glfwGetTime()) * radius;
-//	*/
-//	//gViewMatrix = glm::lookAt(glm::vec3(0.0f, camX, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
-//}
 
 void createObjects(void) {
 	//-- COORDINATE AXES --//
@@ -342,7 +333,6 @@ void createObjects(void) {
 		else
 			GridVerts[ind] = { { 5.0, 0.0, z, 1.0}, {255.0, 255.0, 255.0, 1.0}, {0.0, 0.0, 1.0} }, z++;
 
-		std::cout << GridVerts[ind].Position[0] << " " << GridVerts[ind].Position[2] << std::endl;
 		f = !f;
 		ind++;
 	}
@@ -354,7 +344,6 @@ void createObjects(void) {
 		else
 			GridVerts[ind] = { { x, 0.0, 5.0, 1.0}, {255.0, 255.0, 255.0, 1.0}, {0.0, 0.0, 1.0} }, x++;
 
-		std::cout << GridVerts[ind].Position[0] << " " << GridVerts[ind].Position[2] << std::endl;
 		f = !f;
 		ind++;
 	}
@@ -370,10 +359,56 @@ void createObjects(void) {
 	// loadObject("models/base.obj", glm::vec4(1.0, 0.0, 0.0, 1.0), Verts, Idcs, ObjectID);
 	// createVAOs(Verts, Idcs, ObjectID);
 
-	/*Vertex* Verts;
+	Vertex* Verts;
 	GLushort* Idcs;
-	loadObject("models/base.obj", glm::vec4(255.0, 255.0, 255.0, 1.0), Verts, Idcs, 1);
-	createVAOs(Verts, Idcs, 1);*/
+	size_t VertCount;
+	loadObject("models/Base.obj", glm::vec4(255.0, 0.0, 0.0, 1.0), Verts, Idcs, VertCount, 2);
+	createVAOs(Verts, Idcs, 2);
+	BaseVerts = Verts;
+	BaseVertCount = VertCount;
+
+	loadObject("models/Top.obj", glm::vec4(255.0, 165.0, 0.0, 1.0), Verts, Idcs, VertCount, 3);
+	createVAOs(Verts, Idcs, 3);
+	TopVerts = Verts;
+	TopVertCount = VertCount;
+
+	loadObject("models/Arm1.obj", glm::vec4(0.0, 0.0, 255.0, 1.0), Verts, Idcs, VertCount, 4);
+	createVAOs(Verts, Idcs, 4);
+	Arm1Verts = Verts;
+	Arm1VertCount = VertCount;
+
+	loadObject("models/Joint.obj", glm::vec4(128.0, 0.0, 128.0, 1.0), Verts, Idcs, VertCount, 5);
+	createVAOs(Verts, Idcs, 5);
+	JointVerts = Verts;
+	JointVertCount = VertCount;
+
+	loadObject("models/Arm2.obj", glm::vec4(0.0, 193.0, 200.0, 1.0), Verts, Idcs, VertCount, 6);
+	createVAOs(Verts, Idcs, 6);
+	Arm2Verts = Verts;
+	Arm2VertCount = VertCount;
+
+	loadObject("models/Pen.obj", glm::vec4(255.0, 255.0, 0.0, 1.0), Verts, Idcs, VertCount, 7);
+	createVAOs(Verts, Idcs, 7);
+	PenVerts = Verts;
+	PenVertCount = VertCount;
+
+	loadObject("models/Button.obj", glm::vec4(255.0, 0.0, 0.0, 1.0), Verts, Idcs, VertCount, 8);
+	createVAOs(Verts, Idcs, 8);
+	ButtonVerts = Verts;
+	ButtonVertCount = VertCount;
+
+	loadObject("models/Projectile.obj", glm::vec4(125, 0, 125, 1.0), Verts, Idcs, VertCount, 9);
+	createVAOs(Verts, Idcs, 9);
+	ProjVerts = Verts;
+	ProjVertCount = VertCount;
+
+	InitProjVerts = new Vertex[ProjVertCount];
+
+	for (int i = 0; i < ProjVertCount; i++) {
+		InitProjVerts[i].SetPosition(ProjVerts[i].Position);
+		InitProjVerts[i].SetColor(ProjVerts[i].Color);
+		InitProjVerts[i].SetNormal(ProjVerts[i].Normal);
+	}
 }
 
 void pickObject(void) {
@@ -383,6 +418,7 @@ void pickObject(void) {
 
 	glUseProgram(pickingProgramID);
 	{
+
 		glm::mat4 ModelMatrix = glm::mat4(1.0); // TranslationMatrix * RotationMatrix;
 		glm::mat4 MVP = gProjectionMatrix * gViewMatrix * ModelMatrix;
 
@@ -419,7 +455,7 @@ void pickObject(void) {
 	}
 	else {
 		std::ostringstream oss;
-		oss << "point " << gPickedIndex;
+		oss << "mesh " << gPickedIndex;
 		gMessage = oss.str();
 	}
 
@@ -428,7 +464,130 @@ void pickObject(void) {
 	//continue; // skips the normal rendering
 }
 
-void renderScene(void) {
+float t = 0, minY = 200;
+int ind = 0;
+
+vec4 P0;
+vec4 P2;
+vec4 P1;
+float startTimeL = 0;
+
+void bezierProjectile(float deltatime, mat4 &ModelMatrix) {
+	//glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+
+	vec4 ProjPos = vec4(avgPos(ProjVerts, ProjVertCount), 1);
+
+	if (minY <= ModelMatrix[3][1]) {
+		sPress = false;
+		ProjPos = ModelMatrix * ProjPos;
+		moveBase(vec3(ProjPos), deltatime);
+		minY = 200, ind = 0, t = 0;
+		return;
+	}
+
+	float Cx = P1.x + (1 - t) * (1 - t) * (P0.x - P1.x) + t * t * (P2.x - P1.x);
+	float Cy = P1.y + (1 - t) * (1 - t) * (P0.y - P1.y) + t * t * (P2.y - P1.y);
+	float Cz = P1.z + (1 - t) * (1 - t) * (P0.z - P1.z) + t * t * (P2.z - P1.z);
+
+	BezierVerts[ind].SetPosition(new float[4] {Cx, Cy, Cz, 1});
+	//vec3 ProjPos = avgPos(ProjVerts, ProjVertCount);
+	float dx = Cx - ProjPos.x, dy = Cy - ProjPos.y, dz = Cz - ProjPos.z;   
+	minY = std::min(minY, Cy);
+	//cout << "Cuve coords: " << Cx << " " << Cy << " " << Cz << endl;
+
+	for (int i = 0; i < ProjVertCount; i++) {
+		ProjVerts[i].Position[0] += dx;
+		ProjVerts[i].Position[1] += dy;
+		ProjVerts[i].Position[2] += dz;
+	}
+
+	//cout << ProjVerts[0].Position[0] << " " << ProjVerts[0].Position[1] << " " << ProjVerts[0].Position[2] << endl;
+
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[9]);
+	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[9], ProjVerts, GL_STATIC_DRAW);
+
+	ind++;
+	t += 0.001 * 0.5 * 9.8 * (glfwGetTime() - startTimeL);
+}
+
+
+void launchProjectile(float deltatime, mat4 &ModelMatrix) {
+	vec4 Position1 = vec4(PenVerts[7].Position[0], PenVerts[7].Position[1], PenVerts[7].Position[2], 1);
+	vec4 Position2 = vec4(PenVerts[16].Position[0], PenVerts[16].Position[1], PenVerts[16].Position[2], 1);
+	float theta = atan(Position1.y - Position2.y / Position1.x - Position2.x);
+	float phi = atan(Position1.z - Position2.z / Position1.x - Position2.x);
+	float vx = sin(theta) * cos(phi), vy = sin(theta) * 0, vz = cos(theta) * cos(phi);
+	float t = (float)glfwGetTime() - startTimeL;
+
+	float x = Position1.x + vx * t;
+	float y = Position1.y + vy * t + 0.5 * 9.8 * t * t;
+	float z = Position1.z + vz * t;
+	float dx = x - Position1.x, dy = -y + Position1.y, dz = z - Position1.z;
+	dx *= deltatime, dy *= deltatime, dz *= deltatime;
+
+	vec4 dtrans = vec4(dx, dy, dz, 1);
+	for (int i = 0; i < ProjVertCount; i++) {
+
+		vec4 trans = vec4(ProjVerts[i].Position[0] + dtrans.x, ProjVerts[i].Position[1] + dtrans.y, ProjVerts[i].Position[2] + dtrans.z, 1);
+
+		ProjVerts[i].Position[0] = trans.x;
+		ProjVerts[i].Position[1] = trans.y;
+		ProjVerts[i].Position[2] = trans.z;
+
+		if (trans.y <= 0) {
+			sPress = false;
+			trans = ModelMatrix * vec4(trans);
+			moveBase(vec3(trans), deltatime);
+			break;
+		}
+	}
+
+	/*cout << ProjVerts[0].Position[0] << " " << ProjVerts[1].Position[0] << " " << ProjVerts[2].Position[0] << endl;*/
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[9]);
+	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[9], ProjVerts, GL_STATIC_DRAW);
+
+}
+
+void moveTop(float deltatime, mat4 & ModelMatrix) {
+
+	if (glfwGetKey(window, GLFW_KEY_LEFT)) {
+		gOrientationTop.y -= radians(90.f) * deltatime;
+	}
+
+	else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
+		gOrientationTop.y += radians(90.f) * deltatime;
+	}
+}
+
+void moveArm1(float deltatime) {
+	if (glfwGetKey(window, GLFW_KEY_LEFT)) {
+		float dx = gOrientationArm1.x - radians(90.f) * deltatime;
+		if (dx >= radians(-90.f) && dx <= radians(90.f))
+			gOrientationArm1.x = dx;
+	}
+
+	else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
+		float dx = gOrientationArm1.x + radians(90.f) * deltatime;
+		if (dx >= radians(-90.f) && dx <= radians(90.f))
+			gOrientationArm1.x = dx;
+	}
+}
+
+void moveArm2(float deltatime) {
+	if (glfwGetKey(window, GLFW_KEY_LEFT)) {
+		float dx = gOrientationArm2.x - radians(90.f) * deltatime;
+		if (dx >= radians(-45.f) && dx <= radians(225.f))
+			gOrientationArm2.x = dx;
+	}
+
+	else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
+		float dx = gOrientationArm2.x + radians(90.f) * deltatime;
+		if (dx >= radians(-45.f) && dx <= radians(225.f))
+			gOrientationArm2.x = dx;
+	}
+}
+
+void renderScene(float deltaTime) {
 	//ATTN: DRAW YOUR SCENE HERE. MODIFY/ADAPT WHERE NECESSARY!
 
 	// Dark blue background
@@ -438,9 +597,11 @@ void renderScene(void) {
 
 	glUseProgram(programID);
 	{
-		glm::vec3 lightPos = glm::vec3(4, 4, 4);
 		glm::mat4x4 ModelMatrix = glm::mat4(1.0);
-		glUniform3f(LightID, lightPos.x, lightPos.y, lightPos.z);
+		glm::vec3 lightPos = vec3(cameraPos.x - 2, cameraPos.y, cameraPos.z - 2);
+		vec3 lightPos2 = vec3(cameraPos.x + 2, cameraPos.y, cameraPos.z - 2);
+		vec3 lightPosArray[2] = { lightPos, lightPos2 };
+		glUniform3fv(LightID, 2, (GLfloat*)lightPosArray);
 		glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &gViewMatrix[0][0]);
 		glUniformMatrix4fv(ProjMatrixID, 1, GL_FALSE, &gProjectionMatrix[0][0]);
 		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
@@ -448,10 +609,88 @@ void renderScene(void) {
 		glBindVertexArray(VertexArrayId[0]);	// Draw CoordAxes
 		glDrawArrays(GL_LINES, 0, NumVerts[0]);
 
-		glBindVertexArray(VertexArrayId[1]);	// Draw CoordAxes
-		//glDrawArrays(GL_LINES, 0, NumVerts[1]);
-		glDrawArrays(GL_LINES, 0, NumVerts[1]);
+		glBindVertexArray(VertexArrayId[1]);	// Draw Grid
+		glDrawArrays(GL_LINES, 0, NumVerts[1]); 
+		//glDrawArrays(GL_POINTS, 0, NumVerts[1]);
+		
+
+		glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
+		//glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
+		glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
+
+		vec3 trans = avgPos(TopVerts, TopVertCount);
+		glm::mat4 TranslationMatrix = translate(mat4(), -trans); // A bit to the left
+		glm::mat4 TranslationMatrix1 = translate(mat4(), trans);
+
+		if (tPress) {
+			moveTop(deltaTime, ModelMatrix);
+		}
+
+		mat4 RotationMatrix = eulerAngleYXZ(gOrientationTop.y, gOrientationTop.x, gOrientationTop.z);
+		ModelMatrix *= TranslationMatrix1 * RotationMatrix * TranslationMatrix;
+		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+
+		glBindVertexArray(VertexArrayId[3]);	// Draw Vertices
+		glDrawElements(GL_TRIANGLES, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
+
+		//trans = avgPos(TopVerts, TopVertCount);
+		TranslationMatrix = translate(mat4(), -trans);
+		TranslationMatrix1 = translate(mat4(), trans);
+
+		if (onePress) {
+			moveArm1(deltaTime);
+		}
+
+		RotationMatrix = eulerAngleYXZ(gOrientationArm1.y, gOrientationArm1.x, gOrientationArm1.z);
+		ModelMatrix *= TranslationMatrix1 * RotationMatrix * TranslationMatrix;
+		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+
+		glBindVertexArray(VertexArrayId[4]);	// Draw Vertices
+		glDrawElements(GL_TRIANGLES, NumIdcs[4], GL_UNSIGNED_SHORT, (void*)0);
+
+		trans = avgPos(JointVerts, JointVertCount);
+		TranslationMatrix = translate(mat4(), -trans);
+		TranslationMatrix1 = translate(mat4(), trans);
+
+		if (twoPress) {
+			moveArm2(deltaTime);
+		}
+
+		RotationMatrix = eulerAngleYXZ(gOrientationArm2.y, gOrientationArm2.x, gOrientationArm2.z);
+		ModelMatrix *= TranslationMatrix1 * RotationMatrix * TranslationMatrix;
+		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+
+		glBindVertexArray(VertexArrayId[5]);	// Draw Vertices
+		glDrawElements(GL_TRIANGLES, NumIdcs[5], GL_UNSIGNED_SHORT, (void*)0);
+
+		glBindVertexArray(VertexArrayId[6]);	// Draw Vertices
+		glDrawElements(GL_TRIANGLES, NumIdcs[6], GL_UNSIGNED_SHORT, (void*)0);
+
+		trans = vec3(PenVerts[22].Position[0], PenVerts[22].Position[1], PenVerts[22].Position[2]);
+		TranslationMatrix = translate(mat4(), -trans); 
+		TranslationMatrix1 = translate(mat4(), trans);
+
+		if (pPress) {
+			rotatePen(deltaTime, ModelMatrix);
+		}
+
+		RotationMatrix = eulerAngleYXZ(gOrientationPen.y, gOrientationPen.x, gOrientationPen.z);
+		ModelMatrix *= TranslationMatrix1 * RotationMatrix * TranslationMatrix;
+		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+
+		glBindVertexArray(VertexArrayId[7]);	// Draw Vertices
+		glDrawElements(GL_TRIANGLES, NumIdcs[7], GL_UNSIGNED_SHORT, (void*)0);
+
+		glBindVertexArray(VertexArrayId[8]);	// Draw Vertices
+		glDrawElements(GL_TRIANGLES, NumIdcs[8], GL_UNSIGNED_SHORT, (void*)0);
+
+		if (sPress) {
 			
+				//launchProjectile(deltaTime, ModelMatrix);
+				bezierProjectile(deltaTime, ModelMatrix);
+				glBindVertexArray(VertexArrayId[9]);	// Draw Vertices
+				glDrawElements(GL_TRIANGLES, NumIdcs[9], GL_UNSIGNED_SHORT, (void*)0);
+		}
 		glBindVertexArray(0);
 	}
 	glUseProgram(0);
@@ -477,6 +716,115 @@ void cleanup(void) {
 	glfwTerminate();
 }
 
+void translateObject(Vertex* &Verts, vec3 trans, int ObjectId, size_t VertCount) {
+	for (int i = 0; i < VertCount; i++) {
+		vec4 vec(Verts[i].Position[0] + trans[0], Verts[i].Position[1] + trans[1], Verts[i].Position[2] + trans[2], Verts[i].Position[3]);
+		Verts[i].SetPosition(new float[4] {vec[0], vec[1], vec[2], vec[3]});
+	}
+
+	if (ObjectId == -1) return;
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[ObjectId]);
+	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[ObjectId], Verts, GL_STATIC_DRAW);
+}
+
+vec3 avgPos(Vertex* Verts, const size_t VertCount) {
+	float sx = 0, sy = 0, sz = 0;
+
+	for (int i = 0; i < VertCount; i++) {
+		sx += Verts[i].Position[0];
+		sy += Verts[i].Position[1];
+		sz += Verts[i].Position[2];
+	}
+	
+	return vec3(sx / VertCount, sy / VertCount, sz / VertCount);
+}
+
+void rotatePen(float deltaTime, mat4& ModelMatrix) {
+	if (!pPress) return;
+
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT)) {
+		if (glfwGetKey(window, GLFW_KEY_LEFT)) {
+			gOrientationPen.z -= radians(90.f) * deltaTime;
+		}
+
+		else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
+			gOrientationPen.z += radians(90.f) * deltaTime;
+		}
+	}
+
+	else {
+		if (glfwGetKey(window, GLFW_KEY_LEFT)) {
+			gOrientationPen.y -= radians(90.f) * deltaTime;
+		}  
+
+		else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
+			gOrientationPen.y += radians(90.f) * deltaTime;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_UP)) {
+			gOrientationPen.x -= radians(90.f) * deltaTime;
+		}
+
+		else if (glfwGetKey(window, GLFW_KEY_DOWN)) {
+			gOrientationPen.x += radians(90.f) * deltaTime;
+		}
+	} 
+}
+
+void moveBase(vec3& trans, float deltatime) {
+	trans = trans - avgPos(BaseVerts, BaseVertCount); 
+	trans.y = 0;
+
+	//trans *= deltatime;
+	translateObject(BaseVerts, trans, 2, BaseVertCount);
+	translateObject(TopVerts, trans, 3, TopVertCount);
+	translateObject(Arm1Verts, trans, 4, Arm1VertCount);
+	translateObject(JointVerts, trans, 5, JointVertCount);
+	translateObject(Arm2Verts, trans, 6, Arm2VertCount);
+	translateObject(PenVerts, trans, 7, PenVertCount);
+	translateObject(ButtonVerts, trans, 8, ButtonVertCount);
+	translateObject(ProjVerts, trans, 9, ProjVertCount);
+	translateObject(InitProjVerts, trans, -1, ProjVertCount);
+}
+
+void moveBase(float deltatime) {
+	if (!bPress) return;
+	
+	vec3 trans;
+
+	if (glfwGetKey(window, GLFW_KEY_LEFT)) {
+		trans = vec3(-1.0f, 0.0f, 0.0f) * deltatime * 5.f;
+	}
+
+	else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
+		trans = vec3(1.0f, 0.0f, 0.0f) * deltatime * 5.f;
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_UP)) {
+		trans = vec3(0.0f, 0.0f, -1.0f) * deltatime * 5.f;
+	}
+
+	else if (glfwGetKey(window, GLFW_KEY_DOWN)) {
+		trans = vec3(0.0f, 0.0f, 1.0f) * deltatime * 5.f;
+	}
+
+	translateObject(BaseVerts, trans, 2, BaseVertCount);
+	translateObject(TopVerts, trans, 3, TopVertCount);
+	translateObject(Arm1Verts, trans, 4, Arm1VertCount);
+	translateObject(JointVerts, trans, 5, JointVertCount);
+	translateObject(Arm2Verts, trans, 6, Arm2VertCount);
+	translateObject(PenVerts, trans, 7, PenVertCount);
+	translateObject(ButtonVerts, trans, 8, ButtonVertCount);
+	translateObject(ProjVerts, trans, 9, ProjVertCount);
+	translateObject(InitProjVerts, trans, -1, ProjVertCount);
+}
+
+void resetProjectile() {
+	for (int i = 0; i < ProjVertCount; i++) {
+		ProjVerts[i].SetPosition(InitProjVerts[i].Position);
+	}
+} 
+
 float prevX = 10.f, prevZ = 10.f, prevY = 10.f;
 // Alternative way of triggering functions on keyboard events
 static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -484,17 +832,43 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 	if (action == GLFW_PRESS) {
 		switch (key)
 		{
-		case GLFW_KEY_A:
-			/*prevX += sinf(1.f), prevZ += cosf(1.f);
-			gViewMatrix = glm::lookAt(glm::vec3(sinf(prevX), 10.f, cosf(prevZ)), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));*/
+		case GLFW_KEY_P:
+			pPress = !pPress;
+			changeOpacity(PenVerts, PenVertCount, pPress, 7);
 			break;
-		case GLFW_KEY_D:
+		case GLFW_KEY_B:
+			bPress = !bPress;
+			changeOpacity(BaseVerts, BaseVertCount, bPress, 2);
 			break;
-		case GLFW_KEY_W:
+		case GLFW_KEY_C:
+			cPress = !cPress;
 			break;
 		case GLFW_KEY_S:
+			resetProjectile();
+			sPress = !sPress;
+			if (!sPress) {
+				minY = 100;
+				ind = 0;
+				t = 0;
+			}
+			else {
+				P0 = vec4(PenVerts[7].Position[0], PenVerts[7].Position[1], PenVerts[7].Position[2], 1);
+				P2 = vec4(P0.x, P0.y - 20, P0.z, 1);
+				P1 = vec4(P0.x, P0.y - 2, P0.z - 10, 1);
+				startTimeL = glfwGetTime();
+			}
 			break;
-		case GLFW_KEY_SPACE:
+		case GLFW_KEY_T:
+			tPress = !tPress;
+			changeOpacity(TopVerts, TopVertCount, tPress, 3);
+			break;
+		case GLFW_KEY_1:
+			onePress = !onePress;
+			changeOpacity(Arm1Verts, Arm1VertCount, onePress, 4);
+			break;
+		case GLFW_KEY_2:
+			twoPress = !twoPress;
+			changeOpacity(Arm2Verts, Arm2VertCount, twoPress, 6);
 			break;
 		default:
 			break;
@@ -507,6 +881,69 @@ static void mouseCallback(GLFWwindow* window, int button, int action, int mods) 
 	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
 		pickObject();
 	}
+}
+
+float theta = atan(1), phi = atan(1);
+const float radius = 10.0f;
+
+void updateLight() {
+	glUseProgram(programID);
+	{
+		glm::vec3 lightPos = vec3(cameraPos.x - 2, cameraPos.y, cameraPos.z - 2);
+		vec3 lightPos2 = vec3(cameraPos.x + 2, cameraPos.y, cameraPos.z - 2);
+		vec3 lightPosArray[2] = { lightPos, lightPos2 };
+		glUniform3fv(LightID, 2, (GLfloat*)lightPosArray);
+	}
+	glUseProgram(0);
+}
+
+void changeOpacity(Vertex* Verts, const size_t VertCount, bool f, int ObjectId) {
+	for (int i = 0; i < VertCount; i++) {
+		if (f)
+			Verts[i].SetColor(new float[4] {Verts[i].Color[0] + 100, Verts[i].Color[1] + 100, Verts[i].Color[2] + 100, 1});
+		else
+			Verts[i].SetColor(new float[4] {Verts[i].Color[0] - 100, Verts[i].Color[1] - 100, Verts[i].Color[2] - 100, 1});
+	}
+
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[ObjectId]);
+	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[ObjectId], Verts, GL_STATIC_DRAW);
+}
+
+void moveCamera() {
+	if (!cPress) return;
+
+	if (glfwGetKey(window, GLFW_KEY_LEFT)) {
+		theta -= radians(0.1f);
+		prevX = 0.0 + sin(theta) * cos(phi) * radius;
+		prevZ = 0.0 + cos(theta) * cos(phi) * radius;
+		cameraPos = vec3(prevX, prevY, prevZ);
+		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
+		theta += radians(0.1f);
+		prevX = 0.0 + sin(theta) * cos(phi) * radius;
+		prevZ = 0.0 + cos(theta) * cos(phi) * radius;
+		cameraPos = vec3(prevX, prevY, prevZ);
+		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_UP)) {
+		phi += radians(0.1f);
+		prevY = 0.0 + sin(phi) * radius;
+		prevZ = 0.0 + cos(theta) * cos(phi) * radius;
+		cameraPos = vec3(prevX, prevY, prevZ);
+		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_DOWN)) {
+		phi -= radians(0.1f);
+		prevY = 0.0 + sin(phi) * radius;
+		prevZ = 0.0 + cos(theta) * cos(phi) * radius;
+		cameraPos = vec3(prevX, prevY, prevZ);
+		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+	}
+	updateLight();
 }
 
 int main(void) {
@@ -525,38 +962,32 @@ int main(void) {
 	// Initialize OpenGL pipeline
 	initOpenGL();
 
+	double lastTime = 0;
+
 	// For speed computation
-	double lastTime = glfwGetTime();
+	//double lastTime = glfwGetTime();
 	int nbFrames = 0;
 	do {
 		// Measure speed
 		double currentTime = glfwGetTime();
 		nbFrames++;
-		if (currentTime - lastTime >= 1.0){ // If last prinf() was more than 1sec ago
+		double deltaTime = currentTime - lastTime;
+		if (deltaTime >= 1.0){ // If last prinf() was more than 1sec ago
 			printf("%f ms/frame\n", 1000.0 / double(nbFrames));
 			nbFrames = 0;
 			lastTime += 1.0;
 		}
 
-		if (glfwGetKey(window, GLFW_KEY_A)) {
-			float dx = sinf(prevX - 0.001f), dz = cosf(prevZ - 0.001f);
-			prevX += dx, prevY += dz;
-			gViewMatrix = glm::lookAt(glm::vec3(prevX * 0.001, prevY, prevZ * 0.001), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+		if (cPress) {
+			moveCamera();
 		}
 
-		if (glfwGetKey(window, GLFW_KEY_D)) {
-			float dx = sinf(prevX + 0.001f), dz = cosf(prevZ + 0.001f);
-			prevX += dx, prevY += dz;
-			gViewMatrix = glm::lookAt(glm::vec3(prevX * 0.001, prevY, prevZ * 0.001), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+		if (bPress) {
+			moveBase(deltaTime);
 		}
-
-		if (glfwGetKey(window, GLFW_KEY_S)) {
-			prevY -= 0.001f, prevZ -= 0.001f;
-			gViewMatrix = glm::lookAt(glm::vec3(prevX, sinf(prevY) * 0.001, cosf(prevZ) * 0.001), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
-		}
-
 		// DRAWING POINTS
-		renderScene();
+		renderScene(deltaTime);
+		lastTime = currentTime;
 
 	} // Check if the ESC key was pressed or the window was closed
 	while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
