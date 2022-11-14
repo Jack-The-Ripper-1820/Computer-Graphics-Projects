@@ -73,8 +73,6 @@ void moveTop(float, mat4 &);
 vec3 avgPos(Vertex*, const size_t);
 void changeOpacity(Vertex*, const size_t, bool, int);
 
-unordered_map<string, float*> colorMap;
-
 // GLOBAL VARIABLES
 GLFWwindow* window;
 
@@ -130,8 +128,6 @@ vec3 gOrientationTop;
 vec3 gOrientationPen;
 vec3 gOrientationArm1;
 vec3 gOrientationArm2;
-
-float* PickingColors[NumObjects];
 
 int initWindow(void) {
 	// Initialise GLFW
@@ -370,43 +366,36 @@ void createObjects(void) {
 	createVAOs(Verts, Idcs, 2);
 	BaseVerts = Verts;
 	BaseVertCount = VertCount;
-	colorMap["Base"] = new float[4] {255.0, 0.0, 0.0, 1.0};
 
 	loadObject("models/Top.obj", glm::vec4(255.0, 165.0, 0.0, 1.0), Verts, Idcs, VertCount, 3);
 	createVAOs(Verts, Idcs, 3);
 	TopVerts = Verts;
 	TopVertCount = VertCount;
-	colorMap["Top"] = new float[4] {255.0, 165.0, 0.0, 1.0};
 
 	loadObject("models/Arm1.obj", glm::vec4(0.0, 0.0, 255.0, 1.0), Verts, Idcs, VertCount, 4);
 	createVAOs(Verts, Idcs, 4);
 	Arm1Verts = Verts;
 	Arm1VertCount = VertCount;
-	colorMap["Arm1"] = new float[4] {0.0, 0.0, 255.0, 1.0};
 
 	loadObject("models/Joint.obj", glm::vec4(128.0, 0.0, 128.0, 1.0), Verts, Idcs, VertCount, 5);
 	createVAOs(Verts, Idcs, 5);
 	JointVerts = Verts;
 	JointVertCount = VertCount;
-	colorMap["Joint"] = new float[4] {128.0, 0.0, 128.0, 1.0};
 
 	loadObject("models/Arm2.obj", glm::vec4(0.0, 193.0, 200.0, 1.0), Verts, Idcs, VertCount, 6);
 	createVAOs(Verts, Idcs, 6);
 	Arm2Verts = Verts;
 	Arm2VertCount = VertCount;
-	colorMap["Arm2"] = new float[4] {173.0, 216.0, 230.0, 1.0};
 
 	loadObject("models/Pen.obj", glm::vec4(255.0, 255.0, 0.0, 1.0), Verts, Idcs, VertCount, 7);
 	createVAOs(Verts, Idcs, 7);
 	PenVerts = Verts;
 	PenVertCount = VertCount;
-	colorMap["Pen"] = new float[4] {255.0, 255.0, 0.0, 1.0};
 
 	loadObject("models/Button.obj", glm::vec4(255.0, 0.0, 0.0, 1.0), Verts, Idcs, VertCount, 8);
 	createVAOs(Verts, Idcs, 8);
 	ButtonVerts = Verts;
 	ButtonVertCount = VertCount;
-	colorMap["Button"] = new float[4] {255.0, 0.0, 0.0, 1.0};
 
 	loadObject("models/Projectile.obj", glm::vec4(125, 0, 125, 1.0), Verts, Idcs, VertCount, 9);
 	createVAOs(Verts, Idcs, 9);
@@ -420,14 +409,6 @@ void createObjects(void) {
 		InitProjVerts[i].SetColor(ProjVerts[i].Color);
 		InitProjVerts[i].SetNormal(ProjVerts[i].Normal);
 	}
-
-	/*for (int i = 2; i < NumObjects; i++) {
-		float r = (i & 0x000000FF) >> 0;
-		float g = (i & 0x0000FF00) >> 8;
-		float b = (i & 0x00FF0000) >> 16;
-
-		PickingColors[i] = new float[4] {r, g, b, 1};
-	}*/
 }
 
 void pickObject(void) {
@@ -438,14 +419,14 @@ void pickObject(void) {
 	glUseProgram(pickingProgramID);
 	{
 
-			glm::mat4 ModelMatrix = glm::mat4(1.0); // TranslationMatrix * RotationMatrix;
-			glm::mat4 MVP = gProjectionMatrix * gViewMatrix * ModelMatrix;
+		glm::mat4 ModelMatrix = glm::mat4(1.0); // TranslationMatrix * RotationMatrix;
+		glm::mat4 MVP = gProjectionMatrix * gViewMatrix * ModelMatrix;
 
-			// Send our transformation to the currently bound shader, in the "MVP" uniform
-			glUniformMatrix4fv(PickingMatrixID, 1, GL_FALSE, &MVP[0][0]);
+		// Send our transformation to the currently bound shader, in the "MVP" uniform
+		glUniformMatrix4fv(PickingMatrixID, 1, GL_FALSE, &MVP[0][0]);
 
-			// ATTN: DRAW YOUR PICKING SCENE HERE. REMEMBER TO SEND IN A DIFFERENT PICKING COLOR FOR EACH OBJECT BEFOREHAND
-			glBindVertexArray(0);
+		// ATTN: DRAW YOUR PICKING SCENE HERE. REMEMBER TO SEND IN A DIFFERENT PICKING COLOR FOR EACH OBJECT BEFOREHAND
+		glBindVertexArray(0);
 	}
 	glUseProgram(0);
 	// Wait until all the pending drawing commands are really done.
@@ -468,8 +449,6 @@ void pickObject(void) {
 
 	// Convert the color back to an integer ID
 	gPickedIndex = int(data[0]);
-
-	cout << gPickedIndex << endl;
 
 	if (gPickedIndex == 255) { // Full white, must be the background !
 		gMessage = "background";
@@ -866,7 +845,6 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 			break;
 		case GLFW_KEY_S:
 			resetProjectile();
-			//startTimeL = glfwGetTime();
 			sPress = !sPress;
 			if (!sPress) {
 				minY = 100;
@@ -878,11 +856,6 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 				P2 = vec4(P0.x, P0.y - 20, P0.z, 1);
 				P1 = vec4(P0.x, P0.y - 2, P0.z - 10, 1);
 				startTimeL = glfwGetTime();
-				//P1 = P0 - vec4(PenVerts[16].Position[0], PenVerts[16].Position[1], PenVerts[16].Position[2], 1);
-				//vec4 N = normalize(P1);
-				//P1 += 3.f * N;
-				cout << P0.z << " " << P1.z << endl;
-				//cout << P1.x << P1.y << P1.z << endl;
 			}
 			break;
 		case GLFW_KEY_T:
