@@ -28,7 +28,7 @@ using namespace std;
 #include <common/vboindexer.hpp>
 #include <common/quaternion_utils.hpp>
 
-const int window_width = 1024, window_height = 768;
+const int window_width = 600, window_height = 600;
 
 typedef struct Vertex {
 	float Position[4];
@@ -909,6 +909,8 @@ void changeOpacity(Vertex* Verts, const size_t VertCount, bool f, int ObjectId) 
 	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[ObjectId], Verts, GL_STATIC_DRAW);
 }
 
+vec3 cameraUp = -cross(vec3(0, 1, 0), vec3(0, 0, 1));
+
 void moveCamera() {
 	if (!cPress) return;
 
@@ -917,7 +919,7 @@ void moveCamera() {
 		prevX = 0.0 + sin(theta) * cos(phi) * radius;
 		prevZ = 0.0 + cos(theta) * cos(phi) * radius;
 		cameraPos = vec3(prevX, prevY, prevZ);
-		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), worldUp);
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
@@ -925,7 +927,7 @@ void moveCamera() {
 		prevX = 0.0 + sin(theta) * cos(phi) * radius;
 		prevZ = 0.0 + cos(theta) * cos(phi) * radius;
 		cameraPos = vec3(prevX, prevY, prevZ);
-		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), worldUp);
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_UP)) {
@@ -933,7 +935,7 @@ void moveCamera() {
 		prevY = 0.0 + sin(phi) * radius;
 		prevZ = 0.0 + cos(theta) * cos(phi) * radius;
 		cameraPos = vec3(prevX, prevY, prevZ);
-		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), cameraUp);
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_DOWN)) {
@@ -941,7 +943,7 @@ void moveCamera() {
 		prevY = 0.0 + sin(phi) * radius;
 		prevZ = 0.0 + cos(theta) * cos(phi) * radius;
 		cameraPos = vec3(prevX, prevY, prevZ);
-		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), cameraUp);
 	}
 	updateLight();
 }
