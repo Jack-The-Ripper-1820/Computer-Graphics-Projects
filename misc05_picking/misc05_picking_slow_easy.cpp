@@ -85,7 +85,7 @@ std::string gMessage;
 GLuint programID;
 GLuint pickingProgramID;
 
-const GLuint NumObjects = 10;	// ATTN: THIS NEEDS TO CHANGE AS YOU ADD NEW OBJECTS
+const GLuint NumObjects = 3;	// ATTN: THIS NEEDS TO CHANGE AS YOU ADD NEW OBJECTS
 GLuint VertexArrayId[NumObjects];
 GLuint VertexBufferId[NumObjects];
 GLuint IndexBufferId[NumObjects];
@@ -115,14 +115,14 @@ const size_t GridVertsCount = 12 * 12;
 Vertex GridVerts[GridVertsCount];
 GLushort GridIndices[GridVertsCount];
 
-size_t BaseVertCount, PenVertCount, TopVertCount, Arm1VertCount, Arm2VertCount, ButtonVertCount, JointVertCount, ProjVertCount;
-Vertex* BaseVerts, * PenVerts, * TopVerts, * Arm1Verts, * Arm2Verts, * ButtonVerts, * JointVerts, * ProjVerts, * InitProjVerts;
+size_t BaseVertCount;
+Vertex* BaseVerts;
 
 const size_t BezierVertsCount = 1200;
 Vertex BezierVerts[BezierVertsCount];
 GLushort BezierIndices[BezierVertsCount];
 
-bool bPress = false, pPress = false, shiftPress = false, cPress = false, sPress = false, tPress = false, onePress = false, twoPress = false;
+bool bPress = false, pPress = false, shiftPress = false, cPress = false, sPress = false, tPress = false, onePress = false, twoPress = false, rPress = false, fPress = false;
 
 vec3 gOrientationTop;
 vec3 gOrientationPen;
@@ -362,53 +362,10 @@ void createObjects(void) {
 	Vertex* Verts;
 	GLushort* Idcs;
 	size_t VertCount;
-	loadObject("models/Base.obj", glm::vec4(255.0, 0.0, 0.0, 1.0), Verts, Idcs, VertCount, 2);
+	loadObject("models/Head.obj", glm::vec4(255.0, 255.0, 255.0, 1.0), Verts, Idcs, VertCount, 2);
 	createVAOs(Verts, Idcs, 2);
 	BaseVerts = Verts;
 	BaseVertCount = VertCount;
-
-	loadObject("models/Top.obj", glm::vec4(255.0, 165.0, 0.0, 1.0), Verts, Idcs, VertCount, 3);
-	createVAOs(Verts, Idcs, 3);
-	TopVerts = Verts;
-	TopVertCount = VertCount;
-
-	loadObject("models/Arm1.obj", glm::vec4(0.0, 0.0, 255.0, 1.0), Verts, Idcs, VertCount, 4);
-	createVAOs(Verts, Idcs, 4);
-	Arm1Verts = Verts;
-	Arm1VertCount = VertCount;
-
-	loadObject("models/Joint.obj", glm::vec4(128.0, 0.0, 128.0, 1.0), Verts, Idcs, VertCount, 5);
-	createVAOs(Verts, Idcs, 5);
-	JointVerts = Verts;
-	JointVertCount = VertCount;
-
-	loadObject("models/Arm2.obj", glm::vec4(0.0, 193.0, 200.0, 1.0), Verts, Idcs, VertCount, 6);
-	createVAOs(Verts, Idcs, 6);
-	Arm2Verts = Verts;
-	Arm2VertCount = VertCount;
-
-	loadObject("models/Pen.obj", glm::vec4(255.0, 255.0, 0.0, 1.0), Verts, Idcs, VertCount, 7);
-	createVAOs(Verts, Idcs, 7);
-	PenVerts = Verts;
-	PenVertCount = VertCount;
-
-	loadObject("models/Button.obj", glm::vec4(255.0, 0.0, 0.0, 1.0), Verts, Idcs, VertCount, 8);
-	createVAOs(Verts, Idcs, 8);
-	ButtonVerts = Verts;
-	ButtonVertCount = VertCount;
-
-	loadObject("models/Projectile.obj", glm::vec4(125, 0, 125, 1.0), Verts, Idcs, VertCount, 9);
-	createVAOs(Verts, Idcs, 9);
-	ProjVerts = Verts;
-	ProjVertCount = VertCount;
-
-	InitProjVerts = new Vertex[ProjVertCount];
-
-	for (int i = 0; i < ProjVertCount; i++) {
-		InitProjVerts[i].SetPosition(ProjVerts[i].Position);
-		InitProjVerts[i].SetColor(ProjVerts[i].Color);
-		InitProjVerts[i].SetNormal(ProjVerts[i].Normal);
-	}
 }
 
 void pickObject(void) {
@@ -472,121 +429,6 @@ vec4 P2;
 vec4 P1;
 float startTimeL = 0;
 
-void bezierProjectile(float deltatime, mat4 &ModelMatrix) {
-	//glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
-
-	vec4 ProjPos = vec4(avgPos(ProjVerts, ProjVertCount), 1);
-
-	if (minY <= ModelMatrix[3][1]) {
-		sPress = false;
-		ProjPos = ModelMatrix * ProjPos;
-		moveBase(vec3(ProjPos), deltatime);
-		minY = 200, ind = 0, t = 0;
-		return;
-	}
-
-	float Cx = P1.x + (1 - t) * (1 - t) * (P0.x - P1.x) + t * t * (P2.x - P1.x);
-	float Cy = P1.y + (1 - t) * (1 - t) * (P0.y - P1.y) + t * t * (P2.y - P1.y);
-	float Cz = P1.z + (1 - t) * (1 - t) * (P0.z - P1.z) + t * t * (P2.z - P1.z);
-
-	BezierVerts[ind].SetPosition(new float[4] {Cx, Cy, Cz, 1});
-	//vec3 ProjPos = avgPos(ProjVerts, ProjVertCount);
-	float dx = Cx - ProjPos.x, dy = Cy - ProjPos.y, dz = Cz - ProjPos.z;   
-	minY = std::min(minY, Cy);
-	//cout << "Cuve coords: " << Cx << " " << Cy << " " << Cz << endl;
-
-	for (int i = 0; i < ProjVertCount; i++) {
-		ProjVerts[i].Position[0] += dx;
-		ProjVerts[i].Position[1] += dy;
-		ProjVerts[i].Position[2] += dz;
-	}
-
-	//cout << ProjVerts[0].Position[0] << " " << ProjVerts[0].Position[1] << " " << ProjVerts[0].Position[2] << endl;
-
-	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[9]);
-	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[9], ProjVerts, GL_STATIC_DRAW);
-
-	ind++;
-	t += 0.001 * 0.5 * 9.8 * (glfwGetTime() - startTimeL);
-}
-
-
-void launchProjectile(float deltatime, mat4 &ModelMatrix) {
-	vec4 Position1 = vec4(PenVerts[7].Position[0], PenVerts[7].Position[1], PenVerts[7].Position[2], 1);
-	vec4 Position2 = vec4(PenVerts[16].Position[0], PenVerts[16].Position[1], PenVerts[16].Position[2], 1);
-	float theta = atan(Position1.y - Position2.y / Position1.x - Position2.x);
-	float phi = atan(Position1.z - Position2.z / Position1.x - Position2.x);
-	float vx = sin(theta) * cos(phi), vy = sin(theta) * 0, vz = cos(theta) * cos(phi);
-	float t = (float)glfwGetTime() - startTimeL;
-
-	float x = Position1.x + vx * t;
-	float y = Position1.y + vy * t + 0.5 * 9.8 * t * t;
-	float z = Position1.z + vz * t;
-	float dx = x - Position1.x, dy = -y + Position1.y, dz = z - Position1.z;
-	dx *= deltatime, dy *= deltatime, dz *= deltatime;
-
-	vec4 dtrans = vec4(dx, dy, dz, 1);
-	for (int i = 0; i < ProjVertCount; i++) {
-
-		vec4 trans = vec4(ProjVerts[i].Position[0] + dtrans.x, ProjVerts[i].Position[1] + dtrans.y, ProjVerts[i].Position[2] + dtrans.z, 1);
-
-		ProjVerts[i].Position[0] = trans.x;
-		ProjVerts[i].Position[1] = trans.y;
-		ProjVerts[i].Position[2] = trans.z;
-
-		if (trans.y <= 0) {
-			sPress = false;
-			trans = ModelMatrix * vec4(trans);
-			moveBase(vec3(trans), deltatime);
-			break;
-		}
-	}
-
-	/*cout << ProjVerts[0].Position[0] << " " << ProjVerts[1].Position[0] << " " << ProjVerts[2].Position[0] << endl;*/
-	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[9]);
-	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[9], ProjVerts, GL_STATIC_DRAW);
-
-}
-
-void moveTop(float deltatime, mat4 & ModelMatrix) {
-
-	if (glfwGetKey(window, GLFW_KEY_LEFT)) {
-		gOrientationTop.y -= radians(90.f) * deltatime;
-	}
-
-	else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
-		gOrientationTop.y += radians(90.f) * deltatime;
-	}
-}
-
-void moveArm1(float deltatime) {
-	if (glfwGetKey(window, GLFW_KEY_LEFT)) {
-		float dx = gOrientationArm1.x - radians(90.f) * deltatime;
-		if (dx >= radians(-90.f) && dx <= radians(90.f))
-			gOrientationArm1.x = dx;
-	}
-
-	else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
-		float dx = gOrientationArm1.x + radians(90.f) * deltatime;
-		if (dx >= radians(-90.f) && dx <= radians(90.f))
-			gOrientationArm1.x = dx;
-	}
-}
-
-void moveArm2(float deltatime) {
-	if (glfwGetKey(window, GLFW_KEY_LEFT)) {
-		float dx = gOrientationArm2.x - radians(90.f) * deltatime;
-		if (dx >= radians(-45.f) && dx <= radians(225.f))
-			gOrientationArm2.x = dx;
-	}
-
-	else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
-		float dx = gOrientationArm2.x + radians(90.f) * deltatime;
-		if (dx >= radians(-45.f) && dx <= radians(225.f))
-			gOrientationArm2.x = dx;
-	}
-}
-
 void renderScene(float deltaTime) {
 	//ATTN: DRAW YOUR SCENE HERE. MODIFY/ADAPT WHERE NECESSARY!
 
@@ -616,81 +458,10 @@ void renderScene(float deltaTime) {
 
 		glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
 		//glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
-		glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
+		
+		if(fPress) 
+			glDrawElements(GL_LINES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
 
-		vec3 trans = avgPos(TopVerts, TopVertCount);
-		glm::mat4 TranslationMatrix = translate(mat4(), -trans); // A bit to the left
-		glm::mat4 TranslationMatrix1 = translate(mat4(), trans);
-
-		if (tPress) {
-			moveTop(deltaTime, ModelMatrix);
-		}
-
-		mat4 RotationMatrix = eulerAngleYXZ(gOrientationTop.y, gOrientationTop.x, gOrientationTop.z);
-		ModelMatrix *= TranslationMatrix1 * RotationMatrix * TranslationMatrix;
-		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
-
-		glBindVertexArray(VertexArrayId[3]);	// Draw Vertices
-		glDrawElements(GL_TRIANGLES, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
-
-		//trans = avgPos(TopVerts, TopVertCount);
-		TranslationMatrix = translate(mat4(), -trans);
-		TranslationMatrix1 = translate(mat4(), trans);
-
-		if (onePress) {
-			moveArm1(deltaTime);
-		}
-
-		RotationMatrix = eulerAngleYXZ(gOrientationArm1.y, gOrientationArm1.x, gOrientationArm1.z);
-		ModelMatrix *= TranslationMatrix1 * RotationMatrix * TranslationMatrix;
-		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
-
-		glBindVertexArray(VertexArrayId[4]);	// Draw Vertices
-		glDrawElements(GL_TRIANGLES, NumIdcs[4], GL_UNSIGNED_SHORT, (void*)0);
-
-		trans = avgPos(JointVerts, JointVertCount);
-		TranslationMatrix = translate(mat4(), -trans);
-		TranslationMatrix1 = translate(mat4(), trans);
-
-		if (twoPress) {
-			moveArm2(deltaTime);
-		}
-
-		RotationMatrix = eulerAngleYXZ(gOrientationArm2.y, gOrientationArm2.x, gOrientationArm2.z);
-		ModelMatrix *= TranslationMatrix1 * RotationMatrix * TranslationMatrix;
-		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
-
-		glBindVertexArray(VertexArrayId[5]);	// Draw Vertices
-		glDrawElements(GL_TRIANGLES, NumIdcs[5], GL_UNSIGNED_SHORT, (void*)0);
-
-		glBindVertexArray(VertexArrayId[6]);	// Draw Vertices
-		glDrawElements(GL_TRIANGLES, NumIdcs[6], GL_UNSIGNED_SHORT, (void*)0);
-
-		trans = vec3(PenVerts[22].Position[0], PenVerts[22].Position[1], PenVerts[22].Position[2]);
-		TranslationMatrix = translate(mat4(), -trans); 
-		TranslationMatrix1 = translate(mat4(), trans);
-
-		if (pPress) {
-			rotatePen(deltaTime, ModelMatrix);
-		}
-
-		RotationMatrix = eulerAngleYXZ(gOrientationPen.y, gOrientationPen.x, gOrientationPen.z);
-		ModelMatrix *= TranslationMatrix1 * RotationMatrix * TranslationMatrix;
-		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
-
-		glBindVertexArray(VertexArrayId[7]);	// Draw Vertices
-		glDrawElements(GL_TRIANGLES, NumIdcs[7], GL_UNSIGNED_SHORT, (void*)0);
-
-		glBindVertexArray(VertexArrayId[8]);	// Draw Vertices
-		glDrawElements(GL_TRIANGLES, NumIdcs[8], GL_UNSIGNED_SHORT, (void*)0);
-
-		if (sPress) {
-			
-				//launchProjectile(deltaTime, ModelMatrix);
-				bezierProjectile(deltaTime, ModelMatrix);
-				glBindVertexArray(VertexArrayId[9]);	// Draw Vertices
-				glDrawElements(GL_TRIANGLES, NumIdcs[9], GL_UNSIGNED_SHORT, (void*)0);
-		}
 		glBindVertexArray(0);
 	}
 	glUseProgram(0);
@@ -716,159 +487,29 @@ void cleanup(void) {
 	glfwTerminate();
 }
 
-void translateObject(Vertex* &Verts, vec3 trans, int ObjectId, size_t VertCount) {
-	for (int i = 0; i < VertCount; i++) {
-		vec4 vec(Verts[i].Position[0] + trans[0], Verts[i].Position[1] + trans[1], Verts[i].Position[2] + trans[2], Verts[i].Position[3]);
-		Verts[i].SetPosition(new float[4] {vec[0], vec[1], vec[2], vec[3]});
-	}
-
-	if (ObjectId == -1) return;
-	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[ObjectId]);
-	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[ObjectId], Verts, GL_STATIC_DRAW);
+void resetCamera() {
+	gViewMatrix = glm::lookAt(vec3(10.0f, 10.0f, 10.0f),	// eye
+		glm::vec3(0.0, 0.0, 0.0),	// center
+		worldUp);
 }
-
-vec3 avgPos(Vertex* Verts, const size_t VertCount) {
-	float sx = 0, sy = 0, sz = 0;
-
-	for (int i = 0; i < VertCount; i++) {
-		sx += Verts[i].Position[0];
-		sy += Verts[i].Position[1];
-		sz += Verts[i].Position[2];
-	}
-	
-	return vec3(sx / VertCount, sy / VertCount, sz / VertCount);
-}
-
-void rotatePen(float deltaTime, mat4& ModelMatrix) {
-	if (!pPress) return;
-
-	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT)) {
-		if (glfwGetKey(window, GLFW_KEY_LEFT)) {
-			gOrientationPen.z -= radians(90.f) * deltaTime;
-		}
-
-		else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
-			gOrientationPen.z += radians(90.f) * deltaTime;
-		}
-	}
-
-	else {
-		if (glfwGetKey(window, GLFW_KEY_LEFT)) {
-			gOrientationPen.y -= radians(90.f) * deltaTime;
-		}  
-
-		else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
-			gOrientationPen.y += radians(90.f) * deltaTime;
-		}
-
-		if (glfwGetKey(window, GLFW_KEY_UP)) {
-			gOrientationPen.x -= radians(90.f) * deltaTime;
-		}
-
-		else if (glfwGetKey(window, GLFW_KEY_DOWN)) {
-			gOrientationPen.x += radians(90.f) * deltaTime;
-		}
-	} 
-}
-
-void moveBase(vec3& trans, float deltatime) {
-	trans = trans - avgPos(BaseVerts, BaseVertCount); 
-	trans.y = 0;
-
-	//trans *= deltatime;
-	translateObject(BaseVerts, trans, 2, BaseVertCount);
-	translateObject(TopVerts, trans, 3, TopVertCount);
-	translateObject(Arm1Verts, trans, 4, Arm1VertCount);
-	translateObject(JointVerts, trans, 5, JointVertCount);
-	translateObject(Arm2Verts, trans, 6, Arm2VertCount);
-	translateObject(PenVerts, trans, 7, PenVertCount);
-	translateObject(ButtonVerts, trans, 8, ButtonVertCount);
-	translateObject(ProjVerts, trans, 9, ProjVertCount);
-	translateObject(InitProjVerts, trans, -1, ProjVertCount);
-}
-
-void moveBase(float deltatime) {
-	if (!bPress) return;
-	
-	vec3 trans;
-
-	if (glfwGetKey(window, GLFW_KEY_LEFT)) {
-		trans = vec3(-1.0f, 0.0f, 0.0f) * deltatime * 5.f;
-	}
-
-	else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
-		trans = vec3(1.0f, 0.0f, 0.0f) * deltatime * 5.f;
-	}
-
-	if (glfwGetKey(window, GLFW_KEY_UP)) {
-		trans = vec3(0.0f, 0.0f, -1.0f) * deltatime * 5.f;
-	}
-
-	else if (glfwGetKey(window, GLFW_KEY_DOWN)) {
-		trans = vec3(0.0f, 0.0f, 1.0f) * deltatime * 5.f;
-	}
-
-	translateObject(BaseVerts, trans, 2, BaseVertCount);
-	translateObject(TopVerts, trans, 3, TopVertCount);
-	translateObject(Arm1Verts, trans, 4, Arm1VertCount);
-	translateObject(JointVerts, trans, 5, JointVertCount);
-	translateObject(Arm2Verts, trans, 6, Arm2VertCount);
-	translateObject(PenVerts, trans, 7, PenVertCount);
-	translateObject(ButtonVerts, trans, 8, ButtonVertCount);
-	translateObject(ProjVerts, trans, 9, ProjVertCount);
-	translateObject(InitProjVerts, trans, -1, ProjVertCount);
-}
-
-void resetProjectile() {
-	for (int i = 0; i < ProjVertCount; i++) {
-		ProjVerts[i].SetPosition(InitProjVerts[i].Position);
-	}
-} 
 
 float prevX = 10.f, prevZ = 10.f, prevY = 10.f;
+
 // Alternative way of triggering functions on keyboard events
 static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	// ATTN: MODIFY AS APPROPRIATE
 	if (action == GLFW_PRESS) {
 		switch (key)
 		{
-		case GLFW_KEY_P:
-			pPress = !pPress;
-			changeOpacity(PenVerts, PenVertCount, pPress, 7);
-			break;
-		case GLFW_KEY_B:
-			bPress = !bPress;
-			changeOpacity(BaseVerts, BaseVertCount, bPress, 2);
-			break;
 		case GLFW_KEY_C:
 			cPress = !cPress;
 			break;
-		case GLFW_KEY_S:
-			resetProjectile();
-			sPress = !sPress;
-			if (!sPress) {
-				minY = 100;
-				ind = 0;
-				t = 0;
-			}
-			else {
-				P0 = vec4(PenVerts[7].Position[0], PenVerts[7].Position[1], PenVerts[7].Position[2], 1);
-				P2 = vec4(P0.x, P0.y - 20, P0.z, 1);
-				P1 = vec4(P0.x, P0.y - 2, P0.z - 10, 1);
-				startTimeL = glfwGetTime();
-			}
+		case GLFW_KEY_R:
+			rPress = !rPress;
+			resetCamera();
 			break;
-		case GLFW_KEY_T:
-			tPress = !tPress;
-			changeOpacity(TopVerts, TopVertCount, tPress, 3);
-			break;
-		case GLFW_KEY_1:
-			onePress = !onePress;
-			changeOpacity(Arm1Verts, Arm1VertCount, onePress, 4);
-			break;
-		case GLFW_KEY_2:
-			twoPress = !twoPress;
-			changeOpacity(Arm2Verts, Arm2VertCount, twoPress, 6);
+		case GLFW_KEY_F:
+			fPress = !fPress;
 			break;
 		default:
 			break;
@@ -897,18 +538,6 @@ void updateLight() {
 	glUseProgram(0);
 }
 
-void changeOpacity(Vertex* Verts, const size_t VertCount, bool f, int ObjectId) {
-	for (int i = 0; i < VertCount; i++) {
-		if (f)
-			Verts[i].SetColor(new float[4] {Verts[i].Color[0] + 100, Verts[i].Color[1] + 100, Verts[i].Color[2] + 100, 1});
-		else
-			Verts[i].SetColor(new float[4] {Verts[i].Color[0] - 100, Verts[i].Color[1] - 100, Verts[i].Color[2] - 100, 1});
-	}
-
-	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[ObjectId]);
-	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[ObjectId], Verts, GL_STATIC_DRAW);
-}
-
 vec3 cameraUp = -cross(vec3(0, 1, 0), vec3(0, 0, 1));
 
 void moveCamera() {
@@ -935,7 +564,7 @@ void moveCamera() {
 		prevY = 0.0 + sin(phi) * radius;
 		prevZ = 0.0 + cos(theta) * cos(phi) * radius;
 		cameraPos = vec3(prevX, prevY, prevZ);
-		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), cameraUp);
+		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), worldUp);
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_DOWN)) {
@@ -943,7 +572,7 @@ void moveCamera() {
 		prevY = 0.0 + sin(phi) * radius;
 		prevZ = 0.0 + cos(theta) * cos(phi) * radius;
 		cameraPos = vec3(prevX, prevY, prevZ);
-		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), cameraUp);
+		gViewMatrix = glm::lookAt(glm::vec3(prevX, prevY, prevZ), glm::vec3(0.0, 0.0, 0.0), worldUp);
 	}
 	updateLight();
 }
@@ -984,9 +613,6 @@ int main(void) {
 			moveCamera();
 		}
 
-		if (bPress) {
-			moveBase(deltaTime);
-		}
 		// DRAWING POINTS
 		renderScene(deltaTime);
 		lastTime = currentTime;
