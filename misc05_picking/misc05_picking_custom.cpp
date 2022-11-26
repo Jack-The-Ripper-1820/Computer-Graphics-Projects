@@ -29,7 +29,7 @@ using namespace std;
 #include <common/quaternion_utils.hpp>
 #include <common/texture.hpp>
 #define STB_IMAGE_IMPLEMENTATION
-#include "common/stb_image.h"
+#include <common/stb_image.h>
 
 const int window_width = 600, window_height = 600;
 
@@ -38,6 +38,7 @@ typedef struct Vertex {
 	float Color[4];
 	float Normal[3];
 	float UV[2];
+
 	void SetPosition(float* coords) {
 		Position[0] = coords[0];
 		Position[1] = coords[1];
@@ -50,14 +51,14 @@ typedef struct Vertex {
 		Color[2] = color[2];
 		Color[3] = color[3];
 	}
+	void SetUV(float* coords) {
+		UV[0] = coords[0];
+		UV[1] = coords[1];
+	}
 	void SetNormal(float* coords) {
 		Normal[0] = coords[0];
 		Normal[1] = coords[1];
 		Normal[2] = coords[2];
-	}
-	void SetUV(float* coords) {
-		UV[0] = coords[0];
-		UV[1] = coords[1];
 	}
 };
 
@@ -73,6 +74,7 @@ void cleanup(void);
 static void keyCallback(GLFWwindow*, int, int, int, int);
 static void mouseCallback(GLFWwindow*, int, int, int);
 void updateLight();
+void genPNTriangles(Vertex*, size_t&);
 
 
 // GLOBAL VARIABLES
@@ -87,10 +89,11 @@ std::string gMessage;
 GLuint programID;
 GLuint pickingProgramID;
 
-const GLuint NumObjects = 3;	// ATTN: THIS NEEDS TO CHANGE AS YOU ADD NEW OBJECTS
+const GLuint NumObjects = 4;	// ATTN: THIS NEEDS TO CHANGE AS YOU ADD NEW OBJECTS
 GLuint VertexArrayId[NumObjects];
 GLuint VertexBufferId[NumObjects];
 GLuint IndexBufferId[NumObjects];
+GLuint TextureBufferId[NumObjects];
 //GLuint RenderedTexture[NumObjects];
 //GLuint DepthRenderbuffer[NumObjects];
 
@@ -107,9 +110,7 @@ GLuint ProjMatrixID;
 GLuint PickingMatrixID;
 GLuint pickingColorID;
 GLuint LightID;
-GLuint TextureID;
-GLuint Texture;
-
+//GLuint Texture;
 
 int width, height, nrChannels;
 unsigned char* Data;
@@ -125,19 +126,16 @@ const size_t GridVertsCount = 12 * 12;
 Vertex GridVerts[GridVertsCount];
 GLushort GridIndices[GridVertsCount];
 
-size_t BaseVertCount;
-Vertex* BaseVerts;
+size_t FaceVertCount;
+Vertex* FaceVerts;
+GLushort* FaceIndices;
 
-const size_t BezierVertsCount = 1200;
-Vertex BezierVerts[BezierVertsCount];
-GLushort BezierIndices[BezierVertsCount];
+bool cPress = false, rPress = false, genTriangles = false, fPress = false;
 
-bool bPress = false, pPress = false, shiftPress = false, cPress = false, sPress = false, tPress = false, onePress = false, twoPress = false, rPress = false, fPress = false;
+const size_t NewFaceVertCount = 70000;
+Vertex NewFaceVerts[NewFaceVertCount];
+GLushort NewFaceIndices[NewFaceVertCount];
 
-vec3 gOrientationTop;
-vec3 gOrientationPen;
-vec3 gOrientationArm1;
-vec3 gOrientationArm2;
 
 int initWindow(void) {
 	// Initialise GLFW
@@ -226,9 +224,9 @@ void initOpenGL(void) {
 	// Get a handle for our "LightPosition" uniform
 	LightID = glGetUniformLocation(programID, "LightPosition_worldspace");
 
-	Texture = loadBMP_custom("raiden-face.BMP");
-	Data = stbi_load("raiden-face.jpg", &width, &height, &nrChannels, 0);
-	GLuint TextureID = glGetUniformLocation(programID, "myTextureSampler");
+	//Texture = loadBMP_custom("raiden-face.BMP");
+	Data = stbi_load("trialmap.jpg", &width, &height, &nrChannels, 0);
+	//GLuint TextureID = glGetUniformLocation(programID, "myTextureSampler");
 
 	// TL
 	// Define objects
@@ -241,6 +239,9 @@ void initOpenGL(void) {
 	VertexBufferSize[1] = sizeof(GridVerts);
 	NumVerts[1] = GridVertsCount;
 
+	VertexBufferSize[3] = sizeof(NewFaceVerts);
+	NumVerts[3] = NewFaceVertCount;
+
 	createVAOs(CoordVerts, NULL, 0);
 	createVAOs(GridVerts, NULL, 1);
 }
@@ -248,37 +249,9 @@ void initOpenGL(void) {
 void createVAOs(Vertex Vertices[], unsigned short Indices[], int ObjectId) {
 	GLenum ErrorCheckValue = glGetError();
 	const size_t VertexSize = sizeof(Vertices[0]);
-	/*const size_t RgbOffset = sizeof(Vertices[0].Position);
-	const size_t Normaloffset = sizeof(Vertices[0].Color) + RgbOffset;*/
-	const size_t UvOffset = sizeof(Vertices[0].Position);
-	const size_t Normaloffset = sizeof(Vertices[0].UV) + UvOffset;
-	
-	glGenTextures(1, &TextureID);
-	//glActiveTexture(GL_TEXTURE0);
-	// "Bind" the newly created texture : all future texture functions will modify this texture
-	glBindTexture(GL_TEXTURE_2D, TextureID);
-
-	// Give the image to OpenGL
-	//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, window_width, window_height, 0, GL_BGR, GL_UNSIGNED_BYTE, 0);
-
-	//glUniform1i(TextureID, 0);
-	/*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);*/
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	if (Data)
-	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, Data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else
-	{
-		std::cout << "Failed to load texture" << std::endl;
-	}
+	const size_t RgbOffset = sizeof(Vertices[0].Position);
+	const size_t Normaloffset = sizeof(Vertices[0].Color) + RgbOffset;
+	const size_t UvOffset = sizeof(Vertices[0].Normal) + Normaloffset;
 
 	// Create Vertex Array Object
 	glGenVertexArrays(1, &VertexArrayId[ObjectId]);
@@ -309,14 +282,45 @@ void createVAOs(Vertex Vertices[], unsigned short Indices[], int ObjectId) {
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, IndexBufferSize[ObjectId], Indices, GL_STATIC_DRAW);
 	}
 
+	glGenTextures(1, &TextureBufferId[ObjectId]);
+	//glActiveTexture(GL_TEXTURE0);
+	// "Bind" the newly created texture : all future texture functions will modify this texture
+	glBindTexture(GL_TEXTURE_2D, TextureBufferId[ObjectId]);
+
+	// Give the image to OpenGL
+	//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, window_width, window_height, 0, GL_BGR, GL_UNSIGNED_BYTE, 0);
+
+	//glUniform1i(TextureID, 0);
+	/*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);*/
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	if (Data)
+	{
+		cout << "for objectId: " << ObjectId << endl;
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, Data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+
 	// Assign vertex attributes
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, VertexSize, 0);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, VertexSize, (GLvoid*)UvOffset);
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, VertexSize, (GLvoid*)RgbOffset);
 	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, VertexSize, (GLvoid*)Normaloffset);	// TL
+	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, VertexSize, (GLvoid*)UvOffset);
+
 
 	glEnableVertexAttribArray(0);	// position
-	glEnableVertexAttribArray(1);	// color or uv
+	glEnableVertexAttribArray(1);	// color
 	glEnableVertexAttribArray(2);	// normal
+	glEnableVertexAttribArray(3); // uv
 
 	// Disable our Vertex Buffer Object 
 	glBindVertexArray(0);
@@ -409,6 +413,10 @@ void createObjects(void) {
 		GridIndices[i] = i;
 	}
 
+	for (int i = 0; i < NewFaceVertCount; i++) {
+		NewFaceIndices[i] = i;
+	}
+
 	//-- .OBJs --//
 	// ATTN: Load your models here through .obj files -- example of how to do so is as shown
 	// Vertex* Verts;
@@ -419,11 +427,14 @@ void createObjects(void) {
 	Vertex* Verts;
 	GLushort* Idcs;
 	size_t VertCount;
-	loadObject("models/HeadQuad.obj", glm::vec4(255.0, 255.0, 255.0, 1.0), Verts, Idcs, VertCount, 2);
+	loadObject("models/HeadWithTexture.obj", glm::vec4(1), Verts, Idcs, VertCount, 2);
 	createVAOs(Verts, Idcs, 2);
-	BaseVerts = Verts;
-	BaseVertCount = VertCount;
-	cout << "object successfully loaded" << endl;
+	FaceVerts = Verts;
+	FaceVertCount = VertCount;
+	FaceIndices = Idcs;
+	cout << "object successfully loaded with VertCount : " << VertCount << endl;
+
+	genPNTriangles(Verts, VertCount);
 }
 
 void pickObject(void) {
@@ -479,13 +490,104 @@ void pickObject(void) {
 	//continue; // skips the normal rendering
 }
 
-float t = 0, minY = 200;
-int ind = 0;
+void genPNTriangles(Vertex* Verts, size_t &IndexCount) {
+	//if (!genTriangles) return;
 
-vec4 P0;
-vec4 P2;
-vec4 P1;
-float startTimeL = 0;
+	genTriangles = false;
+	int ind = 0;
+
+	/*vector<vec3> prevPos, prevNorms;
+	for (int i = 0; i < IndexCount; i++) {
+		vec3 P1 = vec3(Verts[i].Position[0], Verts[i].Position[1], Verts[i].Position[2]);
+		vec3 N1 = vec3(Verts[i].Normal[0], Verts[i].Normal[1], Verts[i].Normal[2]);
+		prevPos.push_back(P1);
+		prevNorms.push_back(N1);
+	}*/
+
+	for (int i = 0; i < IndexCount; i++) {
+		int first = i, second = (i + 1) % IndexCount, third = (i + 2) % IndexCount;
+		
+		vec3 P1 = vec3(Verts[first].Position[0], Verts[first].Position[1], Verts[first].Position[2]);
+		vec3 P2 = vec3(Verts[second].Position[0], Verts[second].Position[1], Verts[second].Position[2]);
+		vec3 P3 = vec3(Verts[third].Position[0], Verts[third].Position[1], Verts[third].Position[2]);
+		vec3 N1 = vec3(Verts[first].Normal[0], Verts[first].Normal[1], Verts[first].Normal[2]);
+		vec3 N2 = vec3(Verts[second].Normal[0], Verts[second].Normal[1], Verts[second].Normal[2]);
+		vec3 N3 = vec3(Verts[third].Normal[0], Verts[third].Normal[1], Verts[third].Normal[2]);
+		vec2 UV1 = vec2(Verts[first].UV[0], Verts[first].UV[1]);
+		vec2 UV2 = vec2(Verts[second].UV[0], Verts[second].UV[1]);
+		vec2 UV3 = vec2(Verts[third].UV[0], Verts[third].UV[1]);
+		vec3 C1 = vec3(Verts[first].Color[0], Verts[first].Color[1], Verts[first].Color[2]);
+		vec3 C2 = vec3(Verts[second].Color[0], Verts[second].Color[1], Verts[second].Color[2]);
+		vec3 C3 = vec3(Verts[third].Color[0], Verts[third].Color[1], Verts[third].Color[2]);
+
+		vec3 b300 = P1, b030 = P2, b003 = P3;
+		float w12 = dot((P2 - P1), N1), w21 = dot((P1 - P2), N2), w23 = dot((P3 - P2), N2), w32 = dot((P2 - P3), N3), w13 = dot((P3 - P1), N1), w31 = dot((P1 - P3), N3);
+
+		vec3 b210 = (2.f * P1 + P2 - w12 * N1) / 3.f;
+		vec3 b120 = (2.f * P2 + P1 - w21 * N2) / 3.f;
+		vec3 b021 = (2.f * P2 + P3 - w23 * N2) / 3.f;
+		vec3 b012 = (2.f * P3 + P2 - w32 * N3) / 3.f;
+		vec3 b102 = (2.f * P3 + P1 - w31 * N3) / 3.f;
+		vec3 b201 = (2.f * P1 + P3 - w13 * N1) / 3.f;
+
+		vec3 E = (b210 + b120 + b021 + b012 + b102 + b201) / 6.f;
+		vec3 V = (P1 + P2 + P3) / 3.f;
+
+		vec3 b111 = E + (E - V) / 2.f;
+
+		vec3 n200 = N1, n020 = N2, n002 = N3;
+		float v12 = 2.f * dot((P2 - P1), (N1 + N2)) / dot((P2 - P1), (P2 - P1));
+		float v23 = 2.f * dot((P3 - P2), (N2 + N3)) / dot((P3 - P2), (P3 - P2));
+		float v31 = 2.f * dot((P3 - P1), (N3 + N1)) / dot((P3 - P1), (P3 - P1));
+
+		vec3 h110 = N1 + N2 - v12 * (P2 - P1), h011 = N2 + N3 - v23 * (P3 - P2), h101 = N3 + N1 - v31 * (P1 - P3);
+		vec3 n110 = normalize(h110), n011 = normalize(h011), n101 = normalize(h101);
+
+		//float u = Verts[i].UV[0], v = Verts[i].UV[1], w = 1 - u - v;
+		
+		vec2 avgUV = (UV1 + UV2 + UV3) / 3.f;
+		vec3 avgColor = (C1 + C2 + C3) / 3.f;
+
+		//cout << "before loop: " << ind<< endl;
+		for (float u = 0; u <= 1; u += 0.2) {
+			for (float v = 0; u + v <= 1; v += 0.2) {
+				float w = 1 - u - v;
+				vec3 buv = b300 * w * w * w + b030 * u * u * u + b003 * v * v * v + b210 * 3.f * w * w * u
+					+ b120 * 3.f * w * u * u + b201 * 3.f * w * w * v + b021 * 3.f * u * u * v + b102 * 3.f * w * v * v
+					+ b012 * 3.f * u * v * v + b111 * 6.f * w * v * u;
+
+				vec3 nuv = n200 * w * w + n020 * u * u + n002 * v * v + n110 * w * u + n011 * u * v + n101 * w * v;
+
+				NewFaceVerts[ind].SetPosition(new float[4] {buv[0], buv[1], buv[2], 1});
+				//cout << buv[0] << " " << buv[1] << " " << buv[2] << endl;
+				NewFaceVerts[ind].SetNormal(new float[3] {nuv[0], nuv[1], nuv[2]});
+				//NewFaceVerts[ind].SetColor(new float[4] {avgColor[0], avgColor[1], avgColor[2], 1});
+				NewFaceVerts[ind].SetColor(new float[4] {avgColor[0], avgColor[1], avgColor[2], 1});
+				NewFaceVerts[ind++].SetUV(new float[2] {UV1[0], UV1[1]});
+			}
+		}
+	}
+
+	cout << "ind: " << ind << endl;
+	NumIdcs[3] = NewFaceVertCount;
+	VertexBufferSize[3] = sizeof(NewFaceVerts[0]) * NewFaceVertCount;
+	IndexBufferSize[3] = sizeof(GLushort) * NewFaceVertCount;
+	createVAOs(NewFaceVerts, NewFaceIndices, 3);
+
+	cout << NewFaceVerts[0].Position[0] << " " << NewFaceVerts[0].Position[1] << " " << NewFaceVerts[0].Position[2] << endl;
+	/*IndexCount = prevPos.size();
+	const int NewIndexCount = IndexCount;
+	Vertex NewVerts[5000];
+
+	for (int i = 0; i < IndexCount; i++) {
+		NewVerts[i].SetPosition(new float[4] {prevPos[i][0], prevPos[i][1], prevPos[i][2], 1});
+		NewVerts[i].SetNormal(new float[4] {prevNorms[i][0], prevNorms[i][1], prevNorms[i][2], 1});
+		NewVerts[i].SetColor(new float[4] {Verts[i][0], prevPos[i][1], prevPos[i][2], 1});
+		NewVerts[i].SetPosition(new float[4] {prevPos[i][0], prevPos[i][1], prevPos[i][2], 1});
+	}
+
+	Verts = NewVerts;*/
+}
 
 void renderScene(float deltaTime) {
 	//ATTN: DRAW YOUR SCENE HERE. MODIFY/ADAPT WHERE NECESSARY!
@@ -514,18 +616,40 @@ void renderScene(float deltaTime) {
 		//glDrawArrays(GL_POINTS, 0, NumVerts[1]);
 
 
-		glBindTexture(GL_TEXTURE_2D, TextureID);
-		glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
-		//glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
+		if (!genTriangles) {
+			glBindTexture(GL_TEXTURE_2D, TextureBufferId[2]);
+			glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
+			//glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
 
-		if (fPress) {
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
-			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			if (fPress) {
+				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+				glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
+				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			}
+
+			else {
+				//glBindTexture(GL_TEXTURE_2D, 0);
+				glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
+			}
 		}
+		
 
 		else {
-			glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
+			//cout << "rendering new face" << endl;
+			glBindTexture(GL_TEXTURE_2D, TextureBufferId[3]);
+			glBindVertexArray(VertexArrayId[3]);	// Draw Vertices
+			//glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
+
+			if (fPress) {
+				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+				glDrawElements(GL_TRIANGLES, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
+				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			}
+
+			else {
+				//glBindTexture(GL_TEXTURE_2D, 0);
+				glDrawElements(GL_TRIANGLES, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
+			}
 		}
 
 		glBindVertexArray(0);
@@ -578,6 +702,9 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 			break;
 		case GLFW_KEY_F:
 			fPress = !fPress;
+			break;
+		case GLFW_KEY_P:
+			genTriangles = !genTriangles;
 			break;
 		default:
 			break;

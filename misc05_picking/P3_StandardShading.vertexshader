@@ -2,11 +2,13 @@
 
 // Input vertex data, different for all executions of this shader.
 layout(location = 0) in vec4 vertexPosition_modelspace;
-layout(location = 1) in vec2 vertexUV;
+layout(location = 1) in vec4 vertexColor;
 layout(location = 2) in vec3 vertexNormal;	// TL
+layout(location = 3) in vec2 vertexUV;
 
 // Output data; will be interpolated for each fragment.
 out vec2 UV;
+out vec4 vertex_color;
 out vec3 Position_worldspace;
 out vec3 Normal_cameraspace;
 out vec3 EyeDirection_cameraspace;
@@ -43,5 +45,6 @@ void main() {
 	
 	// UV of the vertex. No special space for this one.
 	UV = vertexUV;
+	vertex_color = vertexColor;
 }
 
