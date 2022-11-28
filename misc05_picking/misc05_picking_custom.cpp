@@ -74,7 +74,7 @@ void cleanup(void);
 static void keyCallback(GLFWwindow*, int, int, int, int);
 static void mouseCallback(GLFWwindow*, int, int, int);
 void updateLight();
-void genPNTriangles(Vertex*, size_t&);
+void genPNTrianglesAndQuads(Vertex*, size_t&);
 
 
 // GLOBAL VARIABLES
@@ -126,7 +126,7 @@ const size_t GridVertsCount = 12 * 12;
 Vertex GridVerts[GridVertsCount];
 GLushort GridIndices[GridVertsCount];
 
-size_t FaceVertCount;
+size_t FaceVertCount, FaceIndexCount;
 Vertex* FaceVerts;
 GLushort* FaceIndices;
 
@@ -337,7 +337,7 @@ void createVAOs(Vertex Vertices[], unsigned short Indices[], int ObjectId) {
 }
 
 // Ensure your .obj files are in the correct format and properly loaded by looking at the following function
-void loadObject(char* file, glm::vec4 color, Vertex*& out_Vertices, GLushort*& out_Indices, size_t& VertCount, int ObjectId) {
+void loadObject(char* file, glm::vec4 color, Vertex*& out_Vertices, GLushort*& out_Indices, size_t& VertCount, size_t &IndexCount, int ObjectId) {
 	// Read our .obj file
 	std::vector<glm::vec3> vertices;
 	std::vector<glm::vec2> uvs;
@@ -353,6 +353,7 @@ void loadObject(char* file, glm::vec4 color, Vertex*& out_Vertices, GLushort*& o
 	const size_t vertCount = indexed_vertices.size();
 	const size_t idxCount = indices.size();
 	VertCount = vertCount;
+	IndexCount = idxCount;
 
 	// populate output arrays
 	out_Vertices = new Vertex[vertCount];
@@ -365,6 +366,9 @@ void loadObject(char* file, glm::vec4 color, Vertex*& out_Vertices, GLushort*& o
 	out_Indices = new GLushort[idxCount];
 	for (int i = 0; i < idxCount; i++) {
 		out_Indices[i] = indices[i];
+		if(i + 1 < idxCount && indices[i + 1] - indices[i] != 1) {
+			//cout << indices[i] << " " << indices[i + 1] << endl;
+		}
 	}
 
 	// set global variables!!
@@ -413,9 +417,9 @@ void createObjects(void) {
 		GridIndices[i] = i;
 	}
 
-	for (int i = 0; i < NewFaceVertCount; i++) {
+	/*for (int i = 0; i < NewFaceVertCount; i++) {
 		NewFaceIndices[i] = i;
-	}
+	}*/
 
 	//-- .OBJs --//
 	// ATTN: Load your models here through .obj files -- example of how to do so is as shown
@@ -426,15 +430,16 @@ void createObjects(void) {
 
 	Vertex* Verts;
 	GLushort* Idcs;
-	size_t VertCount;
-	loadObject("models/HeadWithTexture.obj", glm::vec4(1), Verts, Idcs, VertCount, 2);
+	size_t VertCount, IdxCount;
+	loadObject("models/HeadWithTexture.obj", glm::vec4(1), Verts, Idcs, VertCount, IdxCount, 2);
 	createVAOs(Verts, Idcs, 2);
 	FaceVerts = Verts;
 	FaceVertCount = VertCount;
 	FaceIndices = Idcs;
+	FaceIndexCount = IdxCount;
 	cout << "object successfully loaded with VertCount : " << VertCount << endl;
 
-	genPNTriangles(Verts, VertCount);
+	genPNTrianglesAndQuads(Verts, VertCount);
 }
 
 void pickObject(void) {
@@ -490,7 +495,7 @@ void pickObject(void) {
 	//continue; // skips the normal rendering
 }
 
-void genPNTriangles(Vertex* Verts, size_t &IndexCount) {
+void genPNTrianglesAndQuads(Vertex* Verts, size_t &IndexCount) {
 	//if (!genTriangles) return;
 
 	genTriangles = false;
@@ -505,20 +510,27 @@ void genPNTriangles(Vertex* Verts, size_t &IndexCount) {
 	}*/
 
 	for (int i = 0; i < IndexCount; i++) {
-		int first = i, second = (i + 1) % IndexCount, third = (i + 2) % IndexCount;
+		int first = i, second = (i + 1) % IndexCount, third = (i + 2) % IndexCount, fourth = (i + 3) % IndexCount;
 		
 		vec3 P1 = vec3(Verts[first].Position[0], Verts[first].Position[1], Verts[first].Position[2]);
 		vec3 P2 = vec3(Verts[second].Position[0], Verts[second].Position[1], Verts[second].Position[2]);
 		vec3 P3 = vec3(Verts[third].Position[0], Verts[third].Position[1], Verts[third].Position[2]);
+		vec3 P4 = vec3(Verts[fourth].Position[0], Verts[fourth].Position[1], Verts[fourth].Position[2]);
+
 		vec3 N1 = vec3(Verts[first].Normal[0], Verts[first].Normal[1], Verts[first].Normal[2]);
 		vec3 N2 = vec3(Verts[second].Normal[0], Verts[second].Normal[1], Verts[second].Normal[2]);
 		vec3 N3 = vec3(Verts[third].Normal[0], Verts[third].Normal[1], Verts[third].Normal[2]);
+		vec3 N4 = vec3(Verts[fourth].Normal[0], Verts[fourth].Normal[1], Verts[fourth].Normal[2]);
+
 		vec2 UV1 = vec2(Verts[first].UV[0], Verts[first].UV[1]);
 		vec2 UV2 = vec2(Verts[second].UV[0], Verts[second].UV[1]);
 		vec2 UV3 = vec2(Verts[third].UV[0], Verts[third].UV[1]);
+		vec2 UV4 = vec2(Verts[fourth].UV[0], Verts[fourth].UV[1]);
+
 		vec3 C1 = vec3(Verts[first].Color[0], Verts[first].Color[1], Verts[first].Color[2]);
 		vec3 C2 = vec3(Verts[second].Color[0], Verts[second].Color[1], Verts[second].Color[2]);
 		vec3 C3 = vec3(Verts[third].Color[0], Verts[third].Color[1], Verts[third].Color[2]);
+		vec3 C4 = vec3(Verts[fourth].Color[0], Verts[fourth].Color[1], Verts[fourth].Color[2]);
 
 		vec3 b300 = P1, b030 = P2, b003 = P3;
 		float w12 = dot((P2 - P1), N1), w21 = dot((P1 - P2), N2), w23 = dot((P3 - P2), N2), w32 = dot((P2 - P3), N3), w13 = dot((P3 - P1), N1), w31 = dot((P1 - P3), N3);
@@ -539,7 +551,7 @@ void genPNTriangles(Vertex* Verts, size_t &IndexCount) {
 		float v12 = 2.f * dot((P2 - P1), (N1 + N2)) / dot((P2 - P1), (P2 - P1));
 		float v23 = 2.f * dot((P3 - P2), (N2 + N3)) / dot((P3 - P2), (P3 - P2));
 		float v31 = 2.f * dot((P3 - P1), (N3 + N1)) / dot((P3 - P1), (P3 - P1));
-
+		
 		vec3 h110 = N1 + N2 - v12 * (P2 - P1), h011 = N2 + N3 - v23 * (P3 - P2), h101 = N3 + N1 - v31 * (P1 - P3);
 		vec3 n110 = normalize(h110), n011 = normalize(h011), n101 = normalize(h101);
 
@@ -549,8 +561,8 @@ void genPNTriangles(Vertex* Verts, size_t &IndexCount) {
 		vec3 avgColor = (C1 + C2 + C3) / 3.f;
 
 		//cout << "before loop: " << ind<< endl;
-		for (float u = 0; u <= 1; u += 0.2) {
-			for (float v = 0; u + v <= 1; v += 0.2) {
+		for (float u = 0; u <= 1; u += 0.4) {
+			for (float v = 0; u + v <= 1; v += 0.4) {
 				float w = 1 - u - v;
 				vec3 buv = b300 * w * w * w + b030 * u * u * u + b003 * v * v * v + b210 * 3.f * w * w * u
 					+ b120 * 3.f * w * u * u + b201 * 3.f * w * w * v + b021 * 3.f * u * u * v + b102 * 3.f * w * v * v
@@ -563,9 +575,99 @@ void genPNTriangles(Vertex* Verts, size_t &IndexCount) {
 				NewFaceVerts[ind].SetNormal(new float[3] {nuv[0], nuv[1], nuv[2]});
 				//NewFaceVerts[ind].SetColor(new float[4] {avgColor[0], avgColor[1], avgColor[2], 1});
 				NewFaceVerts[ind].SetColor(new float[4] {avgColor[0], avgColor[1], avgColor[2], 1});
-				NewFaceVerts[ind++].SetUV(new float[2] {UV1[0], UV1[1]});
+				NewFaceVerts[ind].SetUV(new float[2] {avgUV[0], avgUV[1]});
+
+				//NewFaceIndices[ind] = FaceIndices[first] + ind;
+				ind++;
 			}
 		}
+
+		cout << "PRE QUAD IND: " << ind << endl;
+
+		//quad calculation
+
+		vec3 b0 = P1, b1 = P2, b3 = P3, b4 = P4, n0 = N1, n1 = N2, n2 = N3, n3 = N4;
+		vector<vector<vec3>> b(4, vector<vec3>(4));
+
+		vec3 b01 = (2.f * P1 + P2 - dot(P2 - P1, N1) * N1) / 3.f;
+		vec3 b32 = (2.f * P4 + P3 - dot(P3 - P4, N4) * N4) / 3.f;
+		vec3 b03 = (2.f * P1 + P4 - dot(P4 - P1, N1) * N1) / 3.f;
+		vec3 b30 = (2.f * P1 + P4 - dot(P1 - P4, N4) * N4) / 3.f;
+		vec3 b10 = (2.f * P2 + P1 - dot(P1 - P2, N2) * N2) / 3.f;
+		vec3 b23 = (2.f * P3 + P4 - dot(P4 - P3, N3) * N3) / 3.f;
+		vec3 b12 = (2.f * P2 + P3 - dot(P3 - P2, N2) * N2) / 3.f;
+		vec3 b21 = (2.f * P3 + P2 - dot(P2 - P3, N3) * N3) / 3.f;
+
+		float v01 = 2.f * dot((P2 - P1), (N1 + N2)) / dot((P2 - P1), (P2 - P1));
+		float v12q = 2.f * dot((P3 - P2), (N2 + N3)) / dot((P3 - P2), (P3 - P2));
+		float v23q = 2.f * dot((P4 - P3), (P3 + P4)) / dot((P4 - P3), (P4 - P3));
+		float v30 = 2.f * dot((P1 - P4), (P4 + P1)) / dot((P1 - P4), (P1 - P4));
+
+		vec3 h01 = N1 + N2 - v01 * (P2 - P1);
+		vec3 h12 = N2 + N3 - v12q * (P3 - P2);
+		vec3 h23 = N3 + N4 - v23q * (P4 - P3);
+		vec3 h30 = N4 + N1 - v30 * (N1 - N4);
+
+		vec3 n01 = normalize(h01), n12 = normalize(h12), n23 = normalize(h23), n30 = normalize(h30);
+		vec3 q = b03 + b01 + b10 + b12 + b21 + b23 + b32 + b30;
+		
+		vec3 E0 = (2.f * (b01 + b03 + q) - (b21 + b23)) / 18.f;
+		vec3 V0 = ((4.f * P1) + 2.f * (P4 + P2) + P3) / 9.f;
+
+		vec3 E1 = (2.f * (b12 + b10 + q) - (b32 + b30)) / 18.f;
+		vec3 V1 = ((4.f * P2) + 2.f * (P1 + P3) + P4) / 9.f;
+
+		vec3 E2 = (2.f * (b23 + b21 + q) - (b03 + b01)) / 18.f;
+		vec3 V2 = ((4.f * P3) + 2.f * (P2 + P4) + P1) / 9.f;
+
+		vec3 E3 = (2.f * (b30 + b32 + q) - (b10 + b12)) / 18.f;
+		vec3 V3 = ((4.f * P4) + 2.f * (P3 + P1) + P2) / 9.f;
+		
+		float sigma = 0.5f;
+
+		vec3 b02 = (1 + sigma) * E0 - sigma * V0;
+		vec3 b31 = (1 + sigma) * E3 - sigma * E3;
+		vec3 b13 = (1 + sigma) * E1 - sigma * E1;
+		vec3 b20 = (1 + sigma) * E2 - sigma * E2;
+
+		vec3 n0123 = (2.f * (n01 + n12 + n23 + n30) + (n0 + n1 + n2 + n3)) / 12.f;
+
+		vec3 avgColorQuad = (C1 + C2 + C3 + C4) / 4.f;
+		vec2 avgUVQuad = (UV1 + UV2 + UV3 + UV4) / 4.f;
+
+		NewFaceVerts[ind].SetPosition(new float[4] {b02[0], b02[1], b02[2], 1});
+		NewFaceVerts[ind].SetNormal(new float[3] {n0123[0], n0123[1], n0123[2]});
+		NewFaceVerts[ind].SetColor(new float[4] {avgColorQuad[0], avgColorQuad[1], avgColorQuad[2], 1});
+		NewFaceVerts[ind].SetUV(new float[2] {avgUVQuad[0], avgUVQuad[1]});
+		
+		//NewFaceIndices[ind] = FaceIndices[first] + ind;
+		ind++;
+
+		NewFaceVerts[ind].SetPosition(new float[4] {b31[0], b31[1], b31[2], 1});
+		NewFaceVerts[ind].SetNormal(new float[3] {n0123[0], n0123[1], n0123[2]});
+		NewFaceVerts[ind].SetColor(new float[4] {avgColorQuad[0], avgColorQuad[1], avgColorQuad[2], 1});
+		NewFaceVerts[ind].SetUV(new float[2] {avgUVQuad[0], avgUVQuad[1]});
+
+		//NewFaceIndices[ind] = FaceIndices[first] + ind;
+		ind++;
+
+		NewFaceVerts[ind].SetPosition(new float[4] {b13[0], b13[1], b13[2], 1});
+		NewFaceVerts[ind].SetNormal(new float[3] {n0123[0], n0123[1], n0123[2]});
+		NewFaceVerts[ind].SetColor(new float[4] {avgColorQuad[0], avgColorQuad[1], avgColorQuad[2], 1});
+		NewFaceVerts[ind].SetUV(new float[2] {avgUVQuad[0], avgUVQuad[1]});
+
+		//NewFaceIndices[ind] = FaceIndices[first] + ind;
+		ind++;
+
+		NewFaceVerts[ind].SetPosition(new float[4] {b20[0], b20[1], b20[2], 1});
+		NewFaceVerts[ind].SetNormal(new float[3] {n0123[0], n0123[1], n0123[2]});
+		NewFaceVerts[ind].SetColor(new float[4] {avgColorQuad[0], avgColorQuad[1], avgColorQuad[2], 1});
+		NewFaceVerts[ind].SetUV(new float[2] {avgUVQuad[0], avgUVQuad[1]});
+
+		//NewFaceIndices[ind] = FaceIndices[first] + ind;
+		ind++;
+
+		cout << "POST QUAD IND: " << ind << endl;
 	}
 
 	cout << "ind: " << ind << endl;
@@ -624,12 +726,14 @@ void renderScene(float deltaTime) {
 			if (fPress) {
 				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 				glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
+				//glDrawElements(GL_POINTS, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
 				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			}
 
 			else {
 				//glBindTexture(GL_TEXTURE_2D, 0);
 				glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
+				//glDrawElements(GL_POINTS, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
 			}
 		}
 		
@@ -643,12 +747,14 @@ void renderScene(float deltaTime) {
 			if (fPress) {
 				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 				glDrawElements(GL_TRIANGLES, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
+				//glDrawElements(GL_POINTS, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
 				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			}
 
 			else {
 				//glBindTexture(GL_TEXTURE_2D, 0);
 				glDrawElements(GL_TRIANGLES, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
+				//glDrawElements(GL_POINTS, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
 			}
 		}
 
