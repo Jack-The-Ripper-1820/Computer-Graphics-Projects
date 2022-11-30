@@ -1,6 +1,6 @@
 #version 440 core
 
-struct TC2E
+struct FragData
 {
     vec3 position;
     vec3 normal;
@@ -8,17 +8,27 @@ struct TC2E
     vec2 uv;
 };
 
-struct T2F
-{
-    vec3 position;
-    vec3 normal;
-    vec4 color;
-    vec2 uv;
-};
+struct OutputPatch                                                                              
+{                                                                                               
+    vec3 WorldPos_B030;                                                                         
+    vec3 WorldPos_B021;                                                                         
+    vec3 WorldPos_B012;                                                                         
+    vec3 WorldPos_B003;                                                                         
+    vec3 WorldPos_B102;                                                                         
+    vec3 WorldPos_B201;                                                                         
+    vec3 WorldPos_B300;                                                                         
+    vec3 WorldPos_B210;                                                                         
+    vec3 WorldPos_B120;                                                                         
+    vec3 WorldPos_B111;                                                                         
+    vec3 Normal[3];                                                                             
+    vec2 TexCoord[3];
+};   
 
 layout(triangles, equal_spacing, ccw) in;
-in TC2E tcdata[];
-out T2F tedata;
+
+in patch OutputPatch oPatch;     
+
+out FragData fragdata;
 out vec3 position_worldspace;
 out vec3 normal_cameraspace;
 out vec3 eyeDirection_cameraspace;
@@ -30,83 +40,36 @@ uniform mat4 P;
 uniform vec3 lightPosition_worldspace[2];
 uniform highp sampler2D myTextureSampler;
 
+vec2 interpolate2D(vec2 v0, vec2 v1, vec2 v2)                                                   
+{                                                                                               
+    return vec2(gl_TessCoord.x) * v0 + vec2(gl_TessCoord.y) * v1 + vec2(gl_TessCoord.z) * v2;   
+}                                                                                               
+                                                                                                
+vec3 interpolate3D(vec3 v0, vec3 v1, vec3 v2)                                                   
+{                                                                                               
+    return vec3(gl_TessCoord.x) * v0 + vec3(gl_TessCoord.y) * v1 + vec3(gl_TessCoord.z) * v2;   
+}  
+
+
 void main() {
-    vec3 p1 = tcdata[0].position;
-    vec3 p2 = tcdata[1].position;
-    vec3 p3 = tcdata[2].position;
+    fragdata.uv = interpolate2D(oPatch.TexCoord[0], oPatch.TexCoord[1], oPatch.TexCoord[2]); 
+    fragdata.normal = interpolate3D(oPatch.Normal[0], oPatch.Normal[1], oPatch.Normal[2]);                                                                                    
+    
+    float u = gl_TessCoord.x;                                                                   
+    float v = gl_TessCoord.y;                                                                   
+    float w = gl_TessCoord.z;                                                                   
+    float uPow3 = pow(u, 3);                                                                    
+    float vPow3 = pow(v, 3);                                                                    
+    float wPow3 = pow(w, 3);                                                                    
+    float uPow2 = pow(u, 2);                                                                    
+    float vPow2 = pow(v, 2);                                                                    
+    float wPow2 = pow(w, 2);                                                                    
+    vec3 pos = oPatch.WorldPos_B300 * wPow3 + oPatch.WorldPos_B030 * uPow3 + oPatch.WorldPos_B003 * vPow3 +                               
+                     oPatch.WorldPos_B210 * 3.0 * wPow2 * u + oPatch.WorldPos_B120 * 3.0 * w * uPow2 + oPatch.WorldPos_B201 * 3.0 * wPow2 * v + 
+                     oPatch.WorldPos_B021 * 3.0 * uPow2 * v + oPatch.WorldPos_B102 * 3.0 * w * vPow2 + oPatch.WorldPos_B012 * 3.0 * u * vPow2 + 
+                     oPatch.WorldPos_B111 * 6.0 * w * u * v;
 
-    vec3 n1 = tcdata[0].normal;
-    vec3 n2 = tcdata[1].normal;
-    vec3 n3 = tcdata[2].normal;
-
-    vec3 c1 = tcdata[0].color.rgb;
-    vec3 c2 = tcdata[1].color.rgb;
-    vec3 c3 = tcdata[2].color.rgb;
-
-    vec3 uv1 = texture(myTextureSampler, tcdata[0].uv).rgb;
-    vec3 uv2 = texture(myTextureSampler, tcdata[1].uv).rgb;
-    vec3 uv3 = texture(myTextureSampler, tcdata[2].uv).rgb;
-
-    float u = gl_TessCoord.x;
-    float v = gl_TessCoord.y;
-    float w = gl_TessCoord.z;
-
-    vec3 b300 = p1;
-    vec3 b030 = p2;
-    vec3 b003 = p3;
-
-    float w12 = dot(p2 - p1, n1);
-    float w21 = dot(p1 - p2, n2);
-    float w23 = dot(p3 - p2, n2);
-    float w32 = dot(p2 - p3, n3);
-    float w31 = dot(p1 - p3, n3);
-    float w13 = dot(p3 - p1, n1);
-
-    vec3 b210 = (2.*p1 + p2 - w12*n1) / 3.;
-    vec3 b120 = (2.*p2 + p1 - w21*n2) / 3.;
-    vec3 b021 = (2.*p2 + p3 - w23*n2) / 3.;
-    vec3 b012 = (2.*p3 + p2 - w32*n3) / 3.;
-    vec3 b102 = (2.*p3 + p1 - w31*n3) / 3.;
-    vec3 b201 = (2.*p1 + p3 - w13*n1) / 3.;
-
-    vec3 ee = (b120 + b120 + b021 + b012 + b102 + b210) / 6.;
-    vec3 vv = (p1 + p2 + p3) / 3.;
-    vec3 b111 = ee + (ee - vv) / 2.;
-
-    float u3 = u * u * u;
-    float v3 = v * v * v;
-    float w3 = w * w * w;
-    float u2 = u * u;
-    float v2 = v * v;
-    float w2 = w * w;
-
-    vec3 pos = b300 * w3 + b030 * u3 + b003 * v3
-		+ b210 * 3. * w2 * u + b120 * 3. * w * u2 + b201 * 3. * w2 * v
-		+ b021 * 3. * u2 * v + b102 * 3. * w * v2 + b012 * 3. * u * v2
-		+ b012 * 6. * w * u * v;
-
-    tedata.position = pos;
-
-    vec3 n200 = n1;
-    vec3 n020 = n2;
-    vec3 n002 = n3;
-
-    float v12 = (2.*(dot(p2 - p1, n1 + n2) / dot(p2 - p1, p2 - p1)));
-    float v23 = (2.*(dot(p3 - p2, n2 + n3) / dot(p3 - p2, p3 - p2)));
-    float v31 = (2.*(dot(p1 - p3, n3 + n1) / dot(p1 - p3, p1 - p3)));
-
-    vec3 n110 = normalize(n1 + n2 - v12*(p2 - p1));
-    vec3 n011 = normalize(n2 + n3 - v23*(p3 - p2));
-    vec3 n101 = normalize(n3 + n1 - v31*(p1 - p3));
-
-    tedata.normal = n200 * w2 + n020 * u2 + n002 * v2
-		    + n110 * w * u + n011 * u * v + n101 * w * v;
-    //tedata.normal = n1 * w + n2 * u + n3 * v;
-
-    tedata.color = vec4(c1 * w + c2 * u + c3 * v, 1.0);
-    tedata.uv = vec2(uv1 * w + uv2 * u + uv3 * v);
-    //tedata.color = vec4(c1, 1.0);
-
+    fragdata.position = pos;
     gl_Position = P * V * M * vec4(pos, 1.0);
 
     position_worldspace = (M * vec4(pos, 1.0)).xyz;
@@ -123,5 +86,5 @@ void main() {
     //vec3 lightPosition_cameraspace = (V * vec4(lightPosition_worldspace, 1)).xyz;
     //lightDirection_cameraspace = lightPosition_cameraspace + eyeDirection_cameraspace;
 
-    normal_cameraspace = (V * M * vec4(tedata.normal, 1.0)).xyz;
+    normal_cameraspace = (V * M * vec4(fragdata.normal, 1.0)).xyz;
 }

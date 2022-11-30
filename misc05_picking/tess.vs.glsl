@@ -1,23 +1,16 @@
 #version 440 core
 
-struct V2T
-{
-    vec3 position;
-    vec3 normal;
-    vec4 color;
-    vec2 uv;
-};
-
 layout(location = 0) in vec4 vertexPosition_modelspace;
 layout(location = 1) in vec4 vertexColor;
 layout(location = 2) in vec3 vertexNormal_modelspace;
 layout(location = 3) in vec2 vertexUV;
 
-out V2T vdata;
+out vec3 WorldPos_CS_in;                                                                                                                      
+out vec3 Normal_CS_in;
+out vec2 TexCoord_CS_in;
 
 void main() {
-    vdata.position = (vertexPosition_modelspace).xyz;
-    vdata.normal = normalize(vertexNormal_modelspace);
-    vdata.color = vertexColor;
-    vdata.uv = vertexUV;
+    WorldPos_CS_in = (vertexPosition_modelspace).xyz;
+    Normal_CS_in = normalize(vertexNormal_modelspace);
+    TexCoord_CS_in = vertexUV;
 }

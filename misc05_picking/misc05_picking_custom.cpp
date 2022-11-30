@@ -95,8 +95,6 @@ GLuint VertexArrayId[NumObjects];
 GLuint VertexBufferId[NumObjects];
 GLuint IndexBufferId[NumObjects];
 GLuint TextureBufferId[NumObjects];
-//GLuint RenderedTexture[NumObjects];
-//GLuint DepthRenderbuffer[NumObjects];
 
 // TL
 size_t VertexBufferSize[NumObjects];
@@ -118,7 +116,7 @@ GLuint TessProjectionMatrixID;
 GLuint TessLightID;
 GLfloat TessellationLevelInnerID;
 GLfloat TessellationLevelOuterID;
-float TessellationLevel = 8.0f;
+float TessellationLevel = 5.f;
 
 int width, height, nrChannels;
 unsigned char* Data;
@@ -138,7 +136,7 @@ size_t FaceVertCount, FaceIndexCount;
 Vertex* FaceVerts;
 GLushort* FaceIndices;
 
-bool cPress = false, rPress = false, genTriangles = false, fPress = false, tessFlag = false;
+bool cPress = false, rPress = false, genTriangles = false, fPress = false, tessFlag = false, uPress = false;
 
 const size_t NewFaceVertCount = 70000;
 Vertex NewFaceVerts[NewFaceVertCount];
@@ -205,9 +203,6 @@ void initOpenGL(void) {
 	//gProjectionMatrix = glm::ortho(-4.0f, 4.0f, -3.0f, 3.0f, 0.0f, 100.0f); // In world coordinates
 
 	// Camera matrix
-	//gViewMatrix = glm::lookAt(glm::vec3(10.0, 10.0, 10.0f),	// eye
-	//	glm::vec3(0.0, 0.0, 0.0),	// center
-	//	glm::vec3(0.0, 1.0, 0.0));	// up
 
 	gViewMatrix = glm::lookAt(cameraPos,	// eye
 		glm::vec3(0.0, 0.0, 0.0),	// center
@@ -285,44 +280,11 @@ void createVAOs(Vertex Vertices[], unsigned short Indices[], int ObjectId) {
 	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferId[ObjectId]);
 	glBufferData(GL_ARRAY_BUFFER, VertexBufferSize[ObjectId], Vertices, GL_STATIC_DRAW);
 
-	/*glGenRenderbuffers(1, &DepthRenderbuffer[ObjectId]);
-	glBindRenderbuffer(GL_RENDERBUFFER, DepthRenderbuffer[ObjectId]);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, window_width, window_height);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, DepthRenderbuffer[ObjectId]);*/
-
 	// Create Buffer for indices
 	if (Indices != NULL) {
 		glGenBuffers(1, &IndexBufferId[ObjectId]);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IndexBufferId[ObjectId]);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, IndexBufferSize[ObjectId], Indices, GL_STATIC_DRAW);
-	}
-
-	glGenTextures(1, &TextureBufferId[ObjectId]);
-	//glActiveTexture(GL_TEXTURE0);
-	// "Bind" the newly created texture : all future texture functions will modify this texture
-	glBindTexture(GL_TEXTURE_2D, TextureBufferId[ObjectId]);
-
-	// Give the image to OpenGL
-	//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, window_width, window_height, 0, GL_BGR, GL_UNSIGNED_BYTE, 0);
-
-	//glUniform1i(TextureID, 0);
-	/*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);*/
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	if (Data)
-	{
-		cout << "for objectId: " << ObjectId << endl;
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, Data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else
-	{
-		std::cout << "Failed to load texture" << std::endl;
 	}
 
 	// Assign vertex attributes
@@ -348,6 +310,44 @@ void createVAOs(Vertex Vertices[], unsigned short Indices[], int ObjectId) {
 			"ERROR: Could not create a VBO: %s \n",
 			gluErrorString(ErrorCheckValue)
 		);
+	}
+}
+
+void addTexture(int ObjectId) {
+
+	glGenTextures(1, &TextureBufferId[ObjectId]);
+	//glActiveTexture(GL_TEXTURE0);
+	// "Bind" the newly created texture : all future texture functions will modify this texture
+	glBindTexture(GL_TEXTURE_2D, TextureBufferId[ObjectId]);
+
+	// Give the image to OpenGL
+	//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, window_width, window_height, 0, GL_BGR, GL_UNSIGNED_BYTE, 0);
+
+	//glUniform1i(TextureID, 0);
+	/*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);*/
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	if (uPress) {
+		if (Data)
+		{
+			cout << "for objectId: " << ObjectId << endl;
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, Data);
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
+		else
+		{
+			std::cout << "Failed to load texture" << std::endl;
+		}
+	}
+
+	else {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glGenerateMipmap(GL_TEXTURE_2D);
 	}
 }
 
@@ -737,36 +737,11 @@ void renderScene(float deltaTime) {
 
 		glBindVertexArray(VertexArrayId[1]);	// Draw Grid
 		glDrawArrays(GL_LINES, 0, NumVerts[1]);
-		//glDrawArrays(GL_POINTS, 0, NumVerts[1]);
-
-		if (!genTriangles) {
-			glBindTexture(GL_TEXTURE_2D, TextureBufferId[2]);
-			glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
-			//glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
-			
-			glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
-			//glDrawElements(GL_POINTS, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
-		}
 		
-		//else {
-		//	//cout << "rendering new face" << endl;
-		//	glBindTexture(GL_TEXTURE_2D, TextureBufferId[3]);
-		//	glBindVertexArray(VertexArrayId[3]);	// Draw Vertices
-		//	//glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
+		glBindTexture(GL_TEXTURE_2D, TextureBufferId[2]);
+		glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
 
-		//	if (fPress) {
-		//		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		//		glDrawElements(GL_TRIANGLES, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
-		//		//glDrawElements(GL_POINTS, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
-		//		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		//	}
-
-		//	else {
-		//		//glBindTexture(GL_TEXTURE_2D, 0);
-		//		glDrawElements(GL_TRIANGLES, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
-		//		//glDrawElements(GL_POINTS, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
-		//	}
-		//}
+		glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);		
 
 		glBindVertexArray(0);
 	}
@@ -841,6 +816,9 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 		case GLFW_KEY_P:
 			genTriangles = !genTriangles;
 			break;
+		case GLFW_KEY_U:
+			uPress = !uPress;
+			addTexture(2);
 		default:
 			break;
 		}
