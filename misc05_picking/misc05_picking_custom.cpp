@@ -88,6 +88,7 @@ std::string gMessage;
 
 GLuint programID;
 GLuint pickingProgramID;
+GLuint tessProgramID;
 
 const GLuint NumObjects = 4;	// ATTN: THIS NEEDS TO CHANGE AS YOU ADD NEW OBJECTS
 GLuint VertexArrayId[NumObjects];
@@ -110,7 +111,14 @@ GLuint ProjMatrixID;
 GLuint PickingMatrixID;
 GLuint pickingColorID;
 GLuint LightID;
-//GLuint Texture;
+GLuint TessMatrixID;
+GLuint TessModelMatrixID;
+GLuint TessViewMatrixID;
+GLuint TessProjectionMatrixID;
+GLuint TessLightID;
+GLfloat TessellationLevelInnerID;
+GLfloat TessellationLevelOuterID;
+float TessellationLevel = 8.0f;
 
 int width, height, nrChannels;
 unsigned char* Data;
@@ -130,12 +138,11 @@ size_t FaceVertCount, FaceIndexCount;
 Vertex* FaceVerts;
 GLushort* FaceIndices;
 
-bool cPress = false, rPress = false, genTriangles = false, fPress = false;
+bool cPress = false, rPress = false, genTriangles = false, fPress = false, tessFlag = false;
 
 const size_t NewFaceVertCount = 70000;
 Vertex NewFaceVerts[NewFaceVertCount];
 GLushort NewFaceIndices[NewFaceVertCount];
-
 
 int initWindow(void) {
 	// Initialise GLFW
@@ -211,6 +218,7 @@ void initOpenGL(void) {
 	// Create and compile our GLSL program from the shaders
 	programID = LoadShaders("P3_StandardShading.vertexshader", "P3_StandardShading.fragmentshader");
 	pickingProgramID = LoadShaders("P3_Picking.vertexshader", "P3_Picking.fragmentshader");
+	tessProgramID = LoadTessShaders("tess.vs.glsl", "tess.tc.glsl", "tess.te.glsl", "tess.fs.glsl");
 
 	// Get a handle for our "MVP" uniform
 	MatrixID = glGetUniformLocation(programID, "MVP");
@@ -223,6 +231,13 @@ void initOpenGL(void) {
 	pickingColorID = glGetUniformLocation(pickingProgramID, "PickingColor");
 	// Get a handle for our "LightPosition" uniform
 	LightID = glGetUniformLocation(programID, "LightPosition_worldspace");
+
+	TessModelMatrixID = glGetUniformLocation(tessProgramID, "M");
+	TessViewMatrixID = glGetUniformLocation(tessProgramID, "V");
+	TessProjectionMatrixID = glGetUniformLocation(tessProgramID, "P");
+	TessLightID = glGetUniformLocation(tessProgramID, "lightPosition_worldspace");
+	TessellationLevelInnerID = glGetUniformLocation(tessProgramID, "tessellationLevelInner");
+	TessellationLevelOuterID = glGetUniformLocation(tessProgramID, "tessellationLevelOuter");
 
 	//Texture = loadBMP_custom("raiden-face.BMP");
 	Data = stbi_load("trialmap.jpg", &width, &height, &nrChannels, 0);
@@ -439,7 +454,7 @@ void createObjects(void) {
 	FaceIndexCount = IdxCount;
 	cout << "object successfully loaded with VertCount : " << VertCount << endl;
 
-	genPNTrianglesAndQuads(Verts, VertCount);
+	//genPNTrianglesAndQuads(Verts, VertCount);
 }
 
 void pickObject(void) {
@@ -577,7 +592,7 @@ void genPNTrianglesAndQuads(Vertex* Verts, size_t &IndexCount) {
 				NewFaceVerts[ind].SetColor(new float[4] {avgColor[0], avgColor[1], avgColor[2], 1});
 				NewFaceVerts[ind].SetUV(new float[2] {avgUV[0], avgUV[1]});
 
-				//NewFaceIndices[ind] = FaceIndices[first] + ind;
+				NewFaceIndices[ind] = FaceIndices[first] + ind;
 				ind++;
 			}
 		}
@@ -640,7 +655,7 @@ void genPNTrianglesAndQuads(Vertex* Verts, size_t &IndexCount) {
 		NewFaceVerts[ind].SetColor(new float[4] {avgColorQuad[0], avgColorQuad[1], avgColorQuad[2], 1});
 		NewFaceVerts[ind].SetUV(new float[2] {avgUVQuad[0], avgUVQuad[1]});
 		
-		//NewFaceIndices[ind] = FaceIndices[first] + ind;
+		NewFaceIndices[ind] = FaceIndices[first] + ind;
 		ind++;
 
 		NewFaceVerts[ind].SetPosition(new float[4] {b31[0], b31[1], b31[2], 1});
@@ -648,7 +663,7 @@ void genPNTrianglesAndQuads(Vertex* Verts, size_t &IndexCount) {
 		NewFaceVerts[ind].SetColor(new float[4] {avgColorQuad[0], avgColorQuad[1], avgColorQuad[2], 1});
 		NewFaceVerts[ind].SetUV(new float[2] {avgUVQuad[0], avgUVQuad[1]});
 
-		//NewFaceIndices[ind] = FaceIndices[first] + ind;
+		NewFaceIndices[ind] = FaceIndices[first] + ind;
 		ind++;
 
 		NewFaceVerts[ind].SetPosition(new float[4] {b13[0], b13[1], b13[2], 1});
@@ -656,7 +671,7 @@ void genPNTrianglesAndQuads(Vertex* Verts, size_t &IndexCount) {
 		NewFaceVerts[ind].SetColor(new float[4] {avgColorQuad[0], avgColorQuad[1], avgColorQuad[2], 1});
 		NewFaceVerts[ind].SetUV(new float[2] {avgUVQuad[0], avgUVQuad[1]});
 
-		//NewFaceIndices[ind] = FaceIndices[first] + ind;
+		NewFaceIndices[ind] = FaceIndices[first] + ind;
 		ind++;
 
 		NewFaceVerts[ind].SetPosition(new float[4] {b20[0], b20[1], b20[2], 1});
@@ -664,7 +679,7 @@ void genPNTrianglesAndQuads(Vertex* Verts, size_t &IndexCount) {
 		NewFaceVerts[ind].SetColor(new float[4] {avgColorQuad[0], avgColorQuad[1], avgColorQuad[2], 1});
 		NewFaceVerts[ind].SetUV(new float[2] {avgUVQuad[0], avgUVQuad[1]});
 
-		//NewFaceIndices[ind] = FaceIndices[first] + ind;
+		NewFaceIndices[ind] = FaceIndices[first] + ind;
 		ind++;
 
 		cout << "POST QUAD IND: " << ind << endl;
@@ -699,12 +714,19 @@ void renderScene(float deltaTime) {
 	// Re-clear the screen for real rendering
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	glm::mat4x4 ModelMatrix = glm::mat4(1.0);
+	glm::vec3 lightPos = vec3(cameraPos.x - 2, cameraPos.y, cameraPos.z - 2);
+	vec3 lightPos2 = vec3(cameraPos.x + 2, cameraPos.y, cameraPos.z - 2);
+	vec3 lightPosArray[2] = { lightPos, lightPos2 };
+
+	if (fPress) {
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	}
+	else {
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
 	glUseProgram(programID);
-	{
-		glm::mat4x4 ModelMatrix = glm::mat4(1.0);
-		glm::vec3 lightPos = vec3(cameraPos.x - 2, cameraPos.y, cameraPos.z - 2);
-		vec3 lightPos2 = vec3(cameraPos.x + 2, cameraPos.y, cameraPos.z - 2);
-		vec3 lightPosArray[2] = { lightPos, lightPos2 };
+	{	
 		glUniform3fv(LightID, 2, (GLfloat*)lightPosArray);
 		glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &gViewMatrix[0][0]);
 		glUniformMatrix4fv(ProjMatrixID, 1, GL_FALSE, &gProjectionMatrix[0][0]);
@@ -717,48 +739,55 @@ void renderScene(float deltaTime) {
 		glDrawArrays(GL_LINES, 0, NumVerts[1]);
 		//glDrawArrays(GL_POINTS, 0, NumVerts[1]);
 
-
 		if (!genTriangles) {
 			glBindTexture(GL_TEXTURE_2D, TextureBufferId[2]);
 			glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
 			//glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
-
-			if (fPress) {
-				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-				glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
-				//glDrawElements(GL_POINTS, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
-				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-			}
-
-			else {
-				//glBindTexture(GL_TEXTURE_2D, 0);
-				glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
-				//glDrawElements(GL_POINTS, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
-			}
+			
+			glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
+			//glDrawElements(GL_POINTS, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
 		}
 		
+		//else {
+		//	//cout << "rendering new face" << endl;
+		//	glBindTexture(GL_TEXTURE_2D, TextureBufferId[3]);
+		//	glBindVertexArray(VertexArrayId[3]);	// Draw Vertices
+		//	//glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
 
-		else {
-			//cout << "rendering new face" << endl;
-			glBindTexture(GL_TEXTURE_2D, TextureBufferId[3]);
-			glBindVertexArray(VertexArrayId[3]);	// Draw Vertices
-			//glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
+		//	if (fPress) {
+		//		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		//		glDrawElements(GL_TRIANGLES, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
+		//		//glDrawElements(GL_POINTS, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
+		//		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		//	}
 
-			if (fPress) {
-				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-				glDrawElements(GL_TRIANGLES, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
-				//glDrawElements(GL_POINTS, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
-				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-			}
-
-			else {
-				//glBindTexture(GL_TEXTURE_2D, 0);
-				glDrawElements(GL_TRIANGLES, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
-				//glDrawElements(GL_POINTS, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
-			}
-		}
+		//	else {
+		//		//glBindTexture(GL_TEXTURE_2D, 0);
+		//		glDrawElements(GL_TRIANGLES, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
+		//		//glDrawElements(GL_POINTS, NumIdcs[3], GL_UNSIGNED_SHORT, (void*)0);
+		//	}
+		//}
 
 		glBindVertexArray(0);
+	}
+
+	if (genTriangles) {
+		glUseProgram(tessProgramID);
+		{
+			glUniform3fv(TessLightID, 2, (GLfloat*)lightPosArray);
+			glUniformMatrix4fv(TessViewMatrixID, 1, GL_FALSE, &gViewMatrix[0][0]);
+			glUniformMatrix4fv(TessProjectionMatrixID, 1, GL_FALSE, &gProjectionMatrix[0][0]);
+			glUniformMatrix4fv(TessModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
+
+			glUniform1f(TessellationLevelInnerID, TessellationLevel);
+			glUniform1f(TessellationLevelOuterID, TessellationLevel);
+
+			glPatchParameteri(GL_PATCH_VERTICES, 3);
+			glBindVertexArray(VertexArrayId[2]);
+			glDrawElements(GL_PATCHES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
+
+			glBindVertexArray(0);
+		}
 	}
 	glUseProgram(0);
 	// Draw GUI
