@@ -89,6 +89,7 @@ std::string gMessage;
 GLuint programID;
 GLuint pickingProgramID;
 GLuint tessProgramID;
+GLuint tessQuadProgramID;
 
 const GLuint NumObjects = 4;	// ATTN: THIS NEEDS TO CHANGE AS YOU ADD NEW OBJECTS
 GLuint VertexArrayId[NumObjects];
@@ -109,14 +110,19 @@ GLuint ProjMatrixID;
 GLuint PickingMatrixID;
 GLuint pickingColorID;
 GLuint LightID;
-GLuint TessMatrixID;
+
 GLuint TessModelMatrixID;
 GLuint TessViewMatrixID;
 GLuint TessProjectionMatrixID;
 GLuint TessLightID;
-GLfloat TessellationLevelInnerID;
-GLfloat TessellationLevelOuterID;
-float TessellationLevel = 5.f;
+GLfloat TessLevelID;
+GLfloat TessLevelQuadID;
+GLuint TessModelMatrixQuadID;
+GLuint TessViewMatrixQuadID;
+GLuint TessProjectionMatrixQuadID;
+GLuint TessLightQuadID;
+
+float TessLvl = 3.f;
 
 int width, height, nrChannels;
 unsigned char* Data;
@@ -214,7 +220,8 @@ void initOpenGL(void) {
 	programID = LoadShaders("P3_StandardShading.vertexshader", "P3_StandardShading.fragmentshader");
 	pickingProgramID = LoadShaders("P3_Picking.vertexshader", "P3_Picking.fragmentshader");
 	tessProgramID = LoadTessShaders("tess.vs.glsl", "tess.tc.glsl", "tess.te.glsl", "tess.fs.glsl");
-
+	tessQuadProgramID = LoadTessShaders("tess.vs.glsl", "tessquad.tc.glsl", "tessquad.te.glsl", "tess.fs.glsl");
+	
 	// Get a handle for our "MVP" uniform
 	MatrixID = glGetUniformLocation(programID, "MVP");
 	ModelMatrixID = glGetUniformLocation(programID, "M");
@@ -231,9 +238,14 @@ void initOpenGL(void) {
 	TessViewMatrixID = glGetUniformLocation(tessProgramID, "V");
 	TessProjectionMatrixID = glGetUniformLocation(tessProgramID, "P");
 	TessLightID = glGetUniformLocation(tessProgramID, "lightPosition_worldspace");
-	TessellationLevelInnerID = glGetUniformLocation(tessProgramID, "tessellationLevelInner");
-	TessellationLevelOuterID = glGetUniformLocation(tessProgramID, "tessellationLevelOuter");
-
+	TessLevelID = glGetUniformLocation(tessProgramID, "TessellationLevel");
+	TessModelMatrixQuadID = glGetUniformLocation(tessProgramID, "M");
+	TessViewMatrixQuadID = glGetUniformLocation(tessProgramID, "V");
+	TessProjectionMatrixQuadID = glGetUniformLocation(tessProgramID, "P");
+	TessLightQuadID = glGetUniformLocation(tessProgramID, "lightPosition_worldspace");
+	TessLevelQuadID = glGetUniformLocation(tessProgramID, "TessellationLevel");
+	//TessLevelQuadID = glGetUniformLocation(tessQuadProgramID, "TessellationLevel");
+	
 	//Texture = loadBMP_custom("raiden-face.BMP");
 	Data = stbi_load("trialmap.jpg", &width, &height, &nrChannels, 0);
 	//GLuint TextureID = glGetUniformLocation(programID, "myTextureSampler");
@@ -754,10 +766,25 @@ void renderScene(float deltaTime) {
 			glUniformMatrix4fv(TessProjectionMatrixID, 1, GL_FALSE, &gProjectionMatrix[0][0]);
 			glUniformMatrix4fv(TessModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
 
-			glUniform1f(TessellationLevelInnerID, TessellationLevel);
-			glUniform1f(TessellationLevelOuterID, TessellationLevel);
+			glUniform1f(TessLevelID, TessLvl);
 
 			glPatchParameteri(GL_PATCH_VERTICES, 3);
+			glBindVertexArray(VertexArrayId[2]);
+			glDrawElements(GL_PATCHES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
+
+			glBindVertexArray(0);
+		}
+
+		glUseProgram(tessQuadProgramID);
+		{
+			glUniform3fv(TessLightQuadID, 2, (GLfloat*)lightPosArray);
+			glUniformMatrix4fv(TessViewMatrixQuadID, 1, GL_FALSE, &gViewMatrix[0][0]);
+			glUniformMatrix4fv(TessProjectionMatrixQuadID, 1, GL_FALSE, &gProjectionMatrix[0][0]);
+			glUniformMatrix4fv(TessModelMatrixQuadID, 1, GL_FALSE, &ModelMatrix[0][0]);
+
+			glUniform1f(TessLevelQuadID, TessLvl);
+
+			glPatchParameteri(GL_PATCH_VERTICES, 4);
 			glBindVertexArray(VertexArrayId[2]);
 			glDrawElements(GL_PATCHES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
 

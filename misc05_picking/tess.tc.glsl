@@ -19,8 +19,7 @@ struct OutputPatch
 
 
 layout (vertices = 3) out;
-uniform float tessellationLevelInner;
-uniform float tessellationLevelOuter;
+uniform float TessellationLevel;
 
 in vec3 WorldPos_CS_in[];    
 in vec3 Normal_CS_in[];                                                                         
@@ -40,7 +39,7 @@ void CalcPositions()
 {                                                                                               
     oPatch.WorldPos_B030 = WorldPos_CS_in[0];                                                   
     oPatch.WorldPos_B003 = WorldPos_CS_in[1];                                                   
-    oPatch.WorldPos_B300 = WorldPos_CS_in[2];                                                   
+    oPatch.WorldPos_B300 = WorldPos_CS_in[2];
                                                                                                 
     vec3 EdgeB300 = oPatch.WorldPos_B003 - oPatch.WorldPos_B030;                                
     vec3 EdgeB030 = oPatch.WorldPos_B300 - oPatch.WorldPos_B003;                                
@@ -75,8 +74,8 @@ void main() {
                                                                                                 
     CalcPositions();                                                                            
                                                                                                 
-    gl_TessLevelOuter[0] = tessellationLevelOuter;                                                  
-    gl_TessLevelOuter[1] = tessellationLevelOuter;                                                 
-    gl_TessLevelOuter[2] = tessellationLevelOuter;                                                  
-    gl_TessLevelInner[0] = tessellationLevelInner; 
+    gl_TessLevelOuter[0] = TessellationLevel;                                
+    gl_TessLevelOuter[1] = TessellationLevel;                                                 
+    gl_TessLevelOuter[2] = TessellationLevel;                                                  
+    gl_TessLevelInner[0] = TessellationLevel; 
 }
