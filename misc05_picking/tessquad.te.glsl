@@ -26,6 +26,22 @@ struct OutputPatch
     vec3 B12;
     vec3 B21;
     vec3 B2;
+    vec2 T0;                                                                         
+    vec2 T03;                                                                         
+    vec2 T30;                                                                         
+    vec2 T3;                                                                         
+    vec2 T01;                                                                         
+    vec2 T02;                                                                         
+    vec2 T31;                                                                         
+    vec2 T32;                                                                         
+    vec2 T10;                                                                         
+    vec2 T13;
+    vec2 T20;
+    vec2 T23;
+    vec2 T1;
+    vec2 T12;
+    vec2 T21;
+    vec2 T2;
     vec3 Normal[4];                                                                             
     vec2 TexCoord[4];   
 };  
@@ -46,37 +62,8 @@ uniform mat4 P;
 uniform vec3 lightPosition_worldspace[2];
 uniform highp sampler2D myTextureSampler;
 
-vec2 interpolate2D(vec2 v0, vec2 v1, vec2 v2, vec2 v3)                                                   
-{
-    // Interpolate along bottom edge using x component of the
-    // tessellation coordinate
-    vec2 p1 = vec2(mix(v0, v1, gl_TessCoord.x));
-    // Interpolate along top edge using x component of the
-    // tessellation coordinate
-    vec2 p2 = vec2(mix(v2, v3, gl_TessCoord.x));
-    // Now interpolate those two results using the y component
-    // of tessellation coordinate
-    return vec2(mix(p1, p2, gl_TessCoord.y));
-}                                                                                               
-                                                                                                
-vec3 interpolate3D(vec3 v0, vec3 v1, vec3 v2, vec3 v3)                                                   
-{
-    // Interpolate along bottom edge using x component of the
-    // tessellation coordinate
-    vec3 p1 = vec3(mix(v0, v1, gl_TessCoord.x));
-    // Interpolate along top edge using x component of the
-    // tessellation coordinate
-    vec3 p2 = vec3(mix(v2, v3, gl_TessCoord.x));
-    // Now interpolate those two results using the y component
-    // of tessellation coordinate
-    return vec3(mix(p1, p2, gl_TessCoord.y));
-}  
 
-
-void main() {
-    //fragdata.uv = interpolate2D(oPatch.TexCoord[0], oPatch.TexCoord[1], oPatch.TexCoord[2], oPatch.TexCoord[3]); 
-    //fragdata.normal = interpolate3D(oPatch.Normal[0], oPatch.Normal[1], oPatch.Normal[2], oPatch.Normal[3]);                                                                                    
-    
+void main() {    
     float u = gl_TessCoord.x;                                                                   
     float v = gl_TessCoord.y;                                                                   
     vec3 p0 = oPatch.B0, p1 = oPatch.B1, p2 = oPatch.B2, p3 = oPatch.B3;
@@ -92,21 +79,18 @@ void main() {
 	float bv2 = 3. * v * v * (1.-v);
 	float bv3 = v * v * v;
 
-    //float[2][4] = {bu0, bu1, bu2, bu3, bv1, bv2, bv3, bv4}
-    
-    //vec3 puv;
-
-    /*for(int i = 0; i < 4; i++) {
-        for(int j = 0; j < 4; j++) {
-            pos += 
-        }
-    }*/
-
     vec3 pos = bu0 * (bv0* oPatch.B0 + bv1 * oPatch.B01 + bv2 * oPatch.B10 + bv3 * oPatch.B1) 
           + bu1 * (bv0 * oPatch.B03 + bv1 * oPatch.B02 + bv2 * oPatch.B13 + bv3 * oPatch.B12) 
           + bu2 * (bv0 * oPatch.B30 + bv1 * oPatch.B31 + bv2 * oPatch.B20 + bv3 * oPatch.B21) 
            + bu3 * (bv0 * oPatch.B3 + bv1 * oPatch.B32 + bv2 * oPatch.B23 + bv3 * oPatch.B2);
     
+    vec2 tex = bu0 * (bv0* oPatch.T0 + bv1 * oPatch.T01 + bv2 * oPatch.T10 + bv3 * oPatch.T1) 
+          + bu1 * (bv0 * oPatch.T03 + bv1 * oPatch.T02 + bv2 * oPatch.T13 + bv3 * oPatch.T12) 
+          + bu2 * (bv0 * oPatch.T30 + bv1 * oPatch.T31 + bv2 * oPatch.T20 + bv3 * oPatch.T21) 
+           + bu3 * (bv0 * oPatch.T3 + bv1 * oPatch.T32 + bv2 * oPatch.T23 + bv3 * oPatch.T2);
+
+    fragdata.uv = tex;
+
     vec2 t0 = oPatch.TexCoord[0];
 	vec2 t1 = oPatch.TexCoord[1];
 	vec2 t2 = oPatch.TexCoord[2];
@@ -116,19 +100,6 @@ void main() {
 	vec3 n1 = oPatch.Normal[1];
 	vec3 n2 = oPatch.Normal[2];
 	vec3 n3 = oPatch.Normal[3];
-
-
-
-    float tu0 = (1.-u);
-	float tu1 = u;
-	
-	float tv0 = (1.-v);
-	float tv1 = v;
-	
-	//fragdata.uv = (t0 + t1 + t2 + t3) / 4.0;
-    fragdata.uv = tu0*(tv0*t0 + tv1*t1)
-                   + tu1*(tv0*t3 + tv1*t2);
-    //fragdata.uv = (1 - u)(1 - v) * t0 + 
 	
 	float v01 = (2.*(dot(p1 - p0, n0 + n1) / dot(p1 - p0, p1 - p0)));
 	float v12 = (2.*(dot(p2 - p1, n1 + n2) / dot(p2 - p1, p2 - p1)));
@@ -154,11 +125,7 @@ void main() {
                 + nu1*(nv0*n30 + nv1*n0123 + nv2*n12)
                 + nu2*(nv0*n3 + nv1*n23 + nv2*n2);
 
-    //fragdata.normal = vec3(0);
     fragdata.position = pos;
-
-
-
 
     gl_Position = P * V * M * vec4(pos, 1.0);
 

@@ -19,10 +19,19 @@ struct OutputPatch
     vec3 B300;                                                                         
     vec3 B210;                                                                         
     vec3 B120;                                                                         
-    vec3 B111;                                                                         
+    vec3 B111;   
+    vec2 T030;                                                                         
+    vec2 T021;                                                                         
+    vec2 T012;                                                                         
+    vec2 T003;                                                                         
+    vec2 T102;                                                                         
+    vec2 T201;                                                                         
+    vec2 T300;                                                                         
+    vec2 T210;                                                                         
+    vec2 T120;                                                                         
+    vec2 T111;   
     vec3 Normal[3];                                                                             
     vec2 TexCoord[3];
-    vec3  Color[3];
 };   
 
 layout(triangles, equal_spacing, ccw) in;
@@ -53,7 +62,6 @@ vec3 interpolate3D(vec3 v0, vec3 v1, vec3 v2)
 
 
 void main() {
-    fragdata.uv = interpolate2D(oPatch.TexCoord[0], oPatch.TexCoord[1], oPatch.TexCoord[2]); 
     fragdata.normal = interpolate3D(oPatch.Normal[0], oPatch.Normal[1], oPatch.Normal[2]);                                                                                    
     
     float u = gl_TessCoord.x;                                                                   
@@ -70,7 +78,13 @@ void main() {
                      oPatch.B021 * 3.0 * uPow2 * v + oPatch.B102 * 3.0 * w * vPow2 + oPatch.B012 * 3.0 * u * vPow2 + 
                      oPatch.B111 * 6.0 * w * u * v;
 
+    vec2 tex = oPatch.T300 * wPow3 + oPatch.T030 * uPow3 + oPatch.T003 * vPow3 +                               
+                     oPatch.T210 * 3.0 * wPow2 * u + oPatch.T120 * 3.0 * w * uPow2 + oPatch.T201 * 3.0 * wPow2 * v + 
+                     oPatch.T021 * 3.0 * uPow2 * v + oPatch.T102 * 3.0 * w * vPow2 + oPatch.T012 * 3.0 * u * vPow2 + 
+                     oPatch.T111 * 6.0 * w * u * v;
     fragdata.position = pos;
+    fragdata.uv = tex;
+
     gl_Position = P * V * M * vec4(pos, 1.0);
 
     position_worldspace = (M * vec4(pos, 1.0)).xyz;

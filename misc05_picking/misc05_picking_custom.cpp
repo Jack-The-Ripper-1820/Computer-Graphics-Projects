@@ -123,7 +123,7 @@ GLuint TessViewMatrixQuadID;
 GLuint TessProjectionMatrixQuadID;
 GLuint TessLightQuadID;
 
-float TessLvl = 3.f;
+float TessLvl = 8.f;
 
 int width, height, nrChannels;
 unsigned char* Data;
@@ -250,7 +250,7 @@ void initOpenGL(void) {
 	
 	//Texture = loadBMP_custom("raiden-face.BMP");
 	Data = stbi_load("Face-Color.jpg", &width, &height, &nrChannels, 0);
-	//Data = stbi_load("trialmap.jpg", &width, &height, &nrChannels, 0);
+	//Data = stbi_load("akhil2.jpeg", &width, &height, &nrChannels, 0);
 	//GLuint TextureID = glGetUniformLocation(programID, "myTextureSampler");
 
 	// TL
@@ -314,7 +314,7 @@ void createVAOs(Vertex Vertices[], unsigned short Indices[], int ObjectId) {
 	/*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);*/
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	/*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -335,7 +335,7 @@ void createVAOs(Vertex Vertices[], unsigned short Indices[], int ObjectId) {
 	else {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 		glGenerateMipmap(GL_TEXTURE_2D);
-	}
+	}*/
 	// Assign vertex attributes
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, VertexSize, 0);
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, VertexSize, (GLvoid*)RgbOffset);
@@ -500,6 +500,8 @@ void createObjects(void) {
 	loadObject("models/face-stencil.obj", glm::vec4(1), Verts, Idcs, VertCount, IdxCount, 2);
 	//loadObject("models/HeadWithTexture.obj", glm::vec4(1), Verts, Idcs, VertCount, IdxCount, 2);
 	//loadObject("models/face-stencil-nt.obj", glm::vec4(1), Verts, Idcs, VertCount, IdxCount, 2);
+	//loadObject("models/akhilheadnew.obj", glm::vec4(1), Verts, Idcs, VertCount, IdxCount, 2);
+
 
 	createVAOs(Verts, Idcs, 2);
 	FaceVerts = Verts;
