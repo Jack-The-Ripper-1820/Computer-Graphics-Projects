@@ -75,6 +75,7 @@ static void keyCallback(GLFWwindow*, int, int, int, int);
 static void mouseCallback(GLFWwindow*, int, int, int);
 void updateLight();
 void genPNTrianglesAndQuads(Vertex*, size_t&);
+void addTexture(int);
 
 
 // GLOBAL VARIABLES
@@ -220,7 +221,7 @@ void initOpenGL(void) {
 	programID = LoadShaders("P3_StandardShading.vertexshader", "P3_StandardShading.fragmentshader");
 	pickingProgramID = LoadShaders("P3_Picking.vertexshader", "P3_Picking.fragmentshader");
 	tessProgramID = LoadTessShaders("tess.vs.glsl", "tess.tc.glsl", "tess.te.glsl", "tess.fs.glsl");
-	tessQuadProgramID = LoadTessShaders("tess.vs.glsl", "tessquad.tc.glsl", "tessquad.te.glsl", "tess.fs.glsl");
+	tessQuadProgramID = LoadTessShaders("tessquad.vs.glsl", "tessquad.tc.glsl", "tessquad.te.glsl", "tessquad.fs.glsl");
 	
 	// Get a handle for our "MVP" uniform
 	MatrixID = glGetUniformLocation(programID, "MVP");
@@ -247,7 +248,8 @@ void initOpenGL(void) {
 	//TessLevelQuadID = glGetUniformLocation(tessQuadProgramID, "TessellationLevel");
 	
 	//Texture = loadBMP_custom("raiden-face.BMP");
-	Data = stbi_load("trialmap.jpg", &width, &height, &nrChannels, 0);
+	Data = stbi_load("Face-Color.jpg", &width, &height, &nrChannels, 0);
+	//Data = stbi_load("trialmap.jpg", &width, &height, &nrChannels, 0);
 	//GLuint TextureID = glGetUniformLocation(programID, "myTextureSampler");
 
 	// TL
@@ -299,6 +301,40 @@ void createVAOs(Vertex Vertices[], unsigned short Indices[], int ObjectId) {
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, IndexBufferSize[ObjectId], Indices, GL_STATIC_DRAW);
 	}
 
+	glGenTextures(1, &TextureBufferId[ObjectId]);
+	//glActiveTexture(GL_TEXTURE0);
+	// "Bind" the newly created texture : all future texture functions will modify this texture
+	glBindTexture(GL_TEXTURE_2D, TextureBufferId[ObjectId]);
+
+	// Give the image to OpenGL
+	//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, window_width, window_height, 0, GL_BGR, GL_UNSIGNED_BYTE, 0);
+
+	//glUniform1i(TextureID, 0);
+	/*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);*/
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	if (uPress) {
+		if (Data)
+		{
+			cout << "for objectId: " << ObjectId << endl;
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
+		else
+		{
+			std::cout << "Failed to load texture" << std::endl;
+		}
+	}
+
+	else {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
 	// Assign vertex attributes
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, VertexSize, 0);
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, VertexSize, (GLvoid*)RgbOffset);
@@ -361,6 +397,7 @@ void addTexture(int ObjectId) {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 		glGenerateMipmap(GL_TEXTURE_2D);
 	}
+
 }
 
 // Ensure your .obj files are in the correct format and properly loaded by looking at the following function
@@ -458,7 +495,8 @@ void createObjects(void) {
 	Vertex* Verts;
 	GLushort* Idcs;
 	size_t VertCount, IdxCount;
-	loadObject("models/HeadWithTexture.obj", glm::vec4(1), Verts, Idcs, VertCount, IdxCount, 2);
+	loadObject("models/face-stencil.obj", glm::vec4(1), Verts, Idcs, VertCount, IdxCount, 2);
+	//loadObject("models/HeadWithTexture.obj", glm::vec4(1), Verts, Idcs, VertCount, IdxCount, 2);
 	createVAOs(Verts, Idcs, 2);
 	FaceVerts = Verts;
 	FaceVertCount = VertCount;
@@ -750,7 +788,7 @@ void renderScene(float deltaTime) {
 		glBindVertexArray(VertexArrayId[1]);	// Draw Grid
 		glDrawArrays(GL_LINES, 0, NumVerts[1]);
 		
-		glBindTexture(GL_TEXTURE_2D, TextureBufferId[2]);
+		//glBindTexture(GL_TEXTURE_2D, TextureBufferId[2]);
 		glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
 
 		glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);		
@@ -775,7 +813,8 @@ void renderScene(float deltaTime) {
 			glBindVertexArray(0);
 		}
 
-		glUseProgram(tessQuadProgramID);
+		
+		/*glUseProgram(tessQuadProgramID);
 		{
 			glUniform3fv(TessLightQuadID, 2, (GLfloat*)lightPosArray);
 			glUniformMatrix4fv(TessViewMatrixQuadID, 1, GL_FALSE, &gViewMatrix[0][0]);
@@ -789,7 +828,7 @@ void renderScene(float deltaTime) {
 			glDrawElements(GL_PATCHES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
 
 			glBindVertexArray(0);
-		}
+		}*/
 	}
 	glUseProgram(0);
 	// Draw GUI

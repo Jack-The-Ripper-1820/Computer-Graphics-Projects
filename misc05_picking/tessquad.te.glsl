@@ -80,12 +80,12 @@ void main() {
     float u = gl_TessCoord.x;                                                                   
     float v = gl_TessCoord.y;                                                                   
     
-    float bu0 = (1.-u) * (1.-u) * (1.-u);
+    float bu0 = (1. - u) * (1.-u) * (1.-u);
 	float bu1 = 3. * u * (1.-u) * (1.-u);
 	float bu2 = 3. * u * u * (1.-u);
 	float bu3 = u * u * u;
 
-	float bv0 = (1.-v) * (1.-v) * (1.-v);
+	float bv0 = (1. - v) * (1.-v) * (1.-v);
 	float bv1 = 3. * v * (1.-v) * (1.-v);
 	float bv2 = 3. * v * v * (1.-v);
 	float bv3 = v * v * v;
