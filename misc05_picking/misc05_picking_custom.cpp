@@ -143,7 +143,7 @@ size_t FaceVertCount, FaceIndexCount;
 Vertex* FaceVerts;
 GLushort* FaceIndices;
 
-bool cPress = false, rPress = false, genTriangles = false, fPress = false, tessFlag = false, uPress = false;
+bool cPress = false, rPress = false, tessellationOn = false, fPress = false, tessFlag = false, uPress = false;
 
 const size_t NewFaceVertCount = 70000;
 Vertex NewFaceVerts[NewFaceVertCount];
@@ -219,6 +219,7 @@ void initOpenGL(void) {
 
 	// Create and compile our GLSL program from the shaders
 	programID = LoadShaders("P3_StandardShading.vertexshader", "P3_StandardShading.fragmentshader");
+	//programID = LoadTessShaders("tess.vs.glsl", "tess.tc.glsl", "tess.te.glsl", "tess.fs.glsl"); 
 	pickingProgramID = LoadShaders("P3_Picking.vertexshader", "P3_Picking.fragmentshader");
 	tessProgramID = LoadTessShaders("tess.vs.glsl", "tess.tc.glsl", "tess.te.glsl", "tess.fs.glsl");
 	tessQuadProgramID = LoadTessShaders("tessquad.vs.glsl", "tessquad.tc.glsl", "tessquad.te.glsl", "tessquad.fs.glsl");
@@ -240,11 +241,11 @@ void initOpenGL(void) {
 	TessProjectionMatrixID = glGetUniformLocation(tessProgramID, "P");
 	TessLightID = glGetUniformLocation(tessProgramID, "lightPosition_worldspace");
 	TessLevelID = glGetUniformLocation(tessProgramID, "TessellationLevel");
-	TessModelMatrixQuadID = glGetUniformLocation(tessProgramID, "M");
-	TessViewMatrixQuadID = glGetUniformLocation(tessProgramID, "V");
-	TessProjectionMatrixQuadID = glGetUniformLocation(tessProgramID, "P");
-	TessLightQuadID = glGetUniformLocation(tessProgramID, "lightPosition_worldspace");
-	TessLevelQuadID = glGetUniformLocation(tessProgramID, "TessellationLevel");
+	TessModelMatrixQuadID = glGetUniformLocation(tessQuadProgramID, "M");
+	TessViewMatrixQuadID = glGetUniformLocation(tessQuadProgramID, "V");
+	TessProjectionMatrixQuadID = glGetUniformLocation(tessQuadProgramID, "P");
+	TessLightQuadID = glGetUniformLocation(tessQuadProgramID, "lightPosition_worldspace");
+	TessLevelQuadID = glGetUniformLocation(tessQuadProgramID, "TessellationLevel");
 	//TessLevelQuadID = glGetUniformLocation(tessQuadProgramID, "TessellationLevel");
 	
 	//Texture = loadBMP_custom("raiden-face.BMP");
@@ -563,202 +564,6 @@ void pickObject(void) {
 	//continue; // skips the normal rendering
 }
 
-void genPNTrianglesAndQuads(Vertex* Verts, size_t &IndexCount) {
-	//if (!genTriangles) return;
-
-	genTriangles = false;
-	int ind = 0;
-
-	/*vector<vec3> prevPos, prevNorms;
-	for (int i = 0; i < IndexCount; i++) {
-		vec3 P1 = vec3(Verts[i].Position[0], Verts[i].Position[1], Verts[i].Position[2]);
-		vec3 N1 = vec3(Verts[i].Normal[0], Verts[i].Normal[1], Verts[i].Normal[2]);
-		prevPos.push_back(P1);
-		prevNorms.push_back(N1);
-	}*/
-
-	for (int i = 0; i < IndexCount; i++) {
-		int first = i, second = (i + 1) % IndexCount, third = (i + 2) % IndexCount, fourth = (i + 3) % IndexCount;
-		
-		vec3 P1 = vec3(Verts[first].Position[0], Verts[first].Position[1], Verts[first].Position[2]);
-		vec3 P2 = vec3(Verts[second].Position[0], Verts[second].Position[1], Verts[second].Position[2]);
-		vec3 P3 = vec3(Verts[third].Position[0], Verts[third].Position[1], Verts[third].Position[2]);
-		vec3 P4 = vec3(Verts[fourth].Position[0], Verts[fourth].Position[1], Verts[fourth].Position[2]);
-
-		vec3 N1 = vec3(Verts[first].Normal[0], Verts[first].Normal[1], Verts[first].Normal[2]);
-		vec3 N2 = vec3(Verts[second].Normal[0], Verts[second].Normal[1], Verts[second].Normal[2]);
-		vec3 N3 = vec3(Verts[third].Normal[0], Verts[third].Normal[1], Verts[third].Normal[2]);
-		vec3 N4 = vec3(Verts[fourth].Normal[0], Verts[fourth].Normal[1], Verts[fourth].Normal[2]);
-
-		vec2 UV1 = vec2(Verts[first].UV[0], Verts[first].UV[1]);
-		vec2 UV2 = vec2(Verts[second].UV[0], Verts[second].UV[1]);
-		vec2 UV3 = vec2(Verts[third].UV[0], Verts[third].UV[1]);
-		vec2 UV4 = vec2(Verts[fourth].UV[0], Verts[fourth].UV[1]);
-
-		vec3 C1 = vec3(Verts[first].Color[0], Verts[first].Color[1], Verts[first].Color[2]);
-		vec3 C2 = vec3(Verts[second].Color[0], Verts[second].Color[1], Verts[second].Color[2]);
-		vec3 C3 = vec3(Verts[third].Color[0], Verts[third].Color[1], Verts[third].Color[2]);
-		vec3 C4 = vec3(Verts[fourth].Color[0], Verts[fourth].Color[1], Verts[fourth].Color[2]);
-
-		vec3 b300 = P1, b030 = P2, b003 = P3;
-		float w12 = dot((P2 - P1), N1), w21 = dot((P1 - P2), N2), w23 = dot((P3 - P2), N2), w32 = dot((P2 - P3), N3), w13 = dot((P3 - P1), N1), w31 = dot((P1 - P3), N3);
-
-		vec3 b210 = (2.f * P1 + P2 - w12 * N1) / 3.f;
-		vec3 b120 = (2.f * P2 + P1 - w21 * N2) / 3.f;
-		vec3 b021 = (2.f * P2 + P3 - w23 * N2) / 3.f;
-		vec3 b012 = (2.f * P3 + P2 - w32 * N3) / 3.f;
-		vec3 b102 = (2.f * P3 + P1 - w31 * N3) / 3.f;
-		vec3 b201 = (2.f * P1 + P3 - w13 * N1) / 3.f;
-
-		vec3 E = (b210 + b120 + b021 + b012 + b102 + b201) / 6.f;
-		vec3 V = (P1 + P2 + P3) / 3.f;
-
-		vec3 b111 = E + (E - V) / 2.f;
-
-		vec3 n200 = N1, n020 = N2, n002 = N3;
-		float v12 = 2.f * dot((P2 - P1), (N1 + N2)) / dot((P2 - P1), (P2 - P1));
-		float v23 = 2.f * dot((P3 - P2), (N2 + N3)) / dot((P3 - P2), (P3 - P2));
-		float v31 = 2.f * dot((P3 - P1), (N3 + N1)) / dot((P3 - P1), (P3 - P1));
-		
-		vec3 h110 = N1 + N2 - v12 * (P2 - P1), h011 = N2 + N3 - v23 * (P3 - P2), h101 = N3 + N1 - v31 * (P1 - P3);
-		vec3 n110 = normalize(h110), n011 = normalize(h011), n101 = normalize(h101);
-
-		//float u = Verts[i].UV[0], v = Verts[i].UV[1], w = 1 - u - v;
-		
-		vec2 avgUV = (UV1 + UV2 + UV3) / 3.f;
-		vec3 avgColor = (C1 + C2 + C3) / 3.f;
-
-		//cout << "before loop: " << ind<< endl;
-		for (float u = 0; u <= 1; u += 0.4) {
-			for (float v = 0; u + v <= 1; v += 0.4) {
-				float w = 1 - u - v;
-				vec3 buv = b300 * w * w * w + b030 * u * u * u + b003 * v * v * v + b210 * 3.f * w * w * u
-					+ b120 * 3.f * w * u * u + b201 * 3.f * w * w * v + b021 * 3.f * u * u * v + b102 * 3.f * w * v * v
-					+ b012 * 3.f * u * v * v + b111 * 6.f * w * v * u;
-
-				vec3 nuv = n200 * w * w + n020 * u * u + n002 * v * v + n110 * w * u + n011 * u * v + n101 * w * v;
-
-				NewFaceVerts[ind].SetPosition(new float[4] {buv[0], buv[1], buv[2], 1});
-				//cout << buv[0] << " " << buv[1] << " " << buv[2] << endl;
-				NewFaceVerts[ind].SetNormal(new float[3] {nuv[0], nuv[1], nuv[2]});
-				//NewFaceVerts[ind].SetColor(new float[4] {avgColor[0], avgColor[1], avgColor[2], 1});
-				NewFaceVerts[ind].SetColor(new float[4] {avgColor[0], avgColor[1], avgColor[2], 1});
-				NewFaceVerts[ind].SetUV(new float[2] {avgUV[0], avgUV[1]});
-
-				NewFaceIndices[ind] = FaceIndices[first] + ind;
-				ind++;
-			}
-		}
-
-		cout << "PRE QUAD IND: " << ind << endl;
-
-		//quad calculation
-
-		vec3 b0 = P1, b1 = P2, b3 = P3, b4 = P4, n0 = N1, n1 = N2, n2 = N3, n3 = N4;
-		vector<vector<vec3>> b(4, vector<vec3>(4));
-
-		vec3 b01 = (2.f * P1 + P2 - dot(P2 - P1, N1) * N1) / 3.f;
-		vec3 b32 = (2.f * P4 + P3 - dot(P3 - P4, N4) * N4) / 3.f;
-		vec3 b03 = (2.f * P1 + P4 - dot(P4 - P1, N1) * N1) / 3.f;
-		vec3 b30 = (2.f * P1 + P4 - dot(P1 - P4, N4) * N4) / 3.f;
-		vec3 b10 = (2.f * P2 + P1 - dot(P1 - P2, N2) * N2) / 3.f;
-		vec3 b23 = (2.f * P3 + P4 - dot(P4 - P3, N3) * N3) / 3.f;
-		vec3 b12 = (2.f * P2 + P3 - dot(P3 - P2, N2) * N2) / 3.f;
-		vec3 b21 = (2.f * P3 + P2 - dot(P2 - P3, N3) * N3) / 3.f;
-
-		float v01 = 2.f * dot((P2 - P1), (N1 + N2)) / dot((P2 - P1), (P2 - P1));
-		float v12q = 2.f * dot((P3 - P2), (N2 + N3)) / dot((P3 - P2), (P3 - P2));
-		float v23q = 2.f * dot((P4 - P3), (P3 + P4)) / dot((P4 - P3), (P4 - P3));
-		float v30 = 2.f * dot((P1 - P4), (P4 + P1)) / dot((P1 - P4), (P1 - P4));
-
-		vec3 h01 = N1 + N2 - v01 * (P2 - P1);
-		vec3 h12 = N2 + N3 - v12q * (P3 - P2);
-		vec3 h23 = N3 + N4 - v23q * (P4 - P3);
-		vec3 h30 = N4 + N1 - v30 * (N1 - N4);
-
-		vec3 n01 = normalize(h01), n12 = normalize(h12), n23 = normalize(h23), n30 = normalize(h30);
-		vec3 q = b03 + b01 + b10 + b12 + b21 + b23 + b32 + b30;
-		
-		vec3 E0 = (2.f * (b01 + b03 + q) - (b21 + b23)) / 18.f;
-		vec3 V0 = ((4.f * P1) + 2.f * (P4 + P2) + P3) / 9.f;
-
-		vec3 E1 = (2.f * (b12 + b10 + q) - (b32 + b30)) / 18.f;
-		vec3 V1 = ((4.f * P2) + 2.f * (P1 + P3) + P4) / 9.f;
-
-		vec3 E2 = (2.f * (b23 + b21 + q) - (b03 + b01)) / 18.f;
-		vec3 V2 = ((4.f * P3) + 2.f * (P2 + P4) + P1) / 9.f;
-
-		vec3 E3 = (2.f * (b30 + b32 + q) - (b10 + b12)) / 18.f;
-		vec3 V3 = ((4.f * P4) + 2.f * (P3 + P1) + P2) / 9.f;
-		
-		float sigma = 0.5f;
-
-		vec3 b02 = (1 + sigma) * E0 - sigma * V0;
-		vec3 b31 = (1 + sigma) * E3 - sigma * E3;
-		vec3 b13 = (1 + sigma) * E1 - sigma * E1;
-		vec3 b20 = (1 + sigma) * E2 - sigma * E2;
-
-		vec3 n0123 = (2.f * (n01 + n12 + n23 + n30) + (n0 + n1 + n2 + n3)) / 12.f;
-
-		vec3 avgColorQuad = (C1 + C2 + C3 + C4) / 4.f;
-		vec2 avgUVQuad = (UV1 + UV2 + UV3 + UV4) / 4.f;
-
-		NewFaceVerts[ind].SetPosition(new float[4] {b02[0], b02[1], b02[2], 1});
-		NewFaceVerts[ind].SetNormal(new float[3] {n0123[0], n0123[1], n0123[2]});
-		NewFaceVerts[ind].SetColor(new float[4] {avgColorQuad[0], avgColorQuad[1], avgColorQuad[2], 1});
-		NewFaceVerts[ind].SetUV(new float[2] {avgUVQuad[0], avgUVQuad[1]});
-		
-		NewFaceIndices[ind] = FaceIndices[first] + ind;
-		ind++;
-
-		NewFaceVerts[ind].SetPosition(new float[4] {b31[0], b31[1], b31[2], 1});
-		NewFaceVerts[ind].SetNormal(new float[3] {n0123[0], n0123[1], n0123[2]});
-		NewFaceVerts[ind].SetColor(new float[4] {avgColorQuad[0], avgColorQuad[1], avgColorQuad[2], 1});
-		NewFaceVerts[ind].SetUV(new float[2] {avgUVQuad[0], avgUVQuad[1]});
-
-		NewFaceIndices[ind] = FaceIndices[first] + ind;
-		ind++;
-
-		NewFaceVerts[ind].SetPosition(new float[4] {b13[0], b13[1], b13[2], 1});
-		NewFaceVerts[ind].SetNormal(new float[3] {n0123[0], n0123[1], n0123[2]});
-		NewFaceVerts[ind].SetColor(new float[4] {avgColorQuad[0], avgColorQuad[1], avgColorQuad[2], 1});
-		NewFaceVerts[ind].SetUV(new float[2] {avgUVQuad[0], avgUVQuad[1]});
-
-		NewFaceIndices[ind] = FaceIndices[first] + ind;
-		ind++;
-
-		NewFaceVerts[ind].SetPosition(new float[4] {b20[0], b20[1], b20[2], 1});
-		NewFaceVerts[ind].SetNormal(new float[3] {n0123[0], n0123[1], n0123[2]});
-		NewFaceVerts[ind].SetColor(new float[4] {avgColorQuad[0], avgColorQuad[1], avgColorQuad[2], 1});
-		NewFaceVerts[ind].SetUV(new float[2] {avgUVQuad[0], avgUVQuad[1]});
-
-		NewFaceIndices[ind] = FaceIndices[first] + ind;
-		ind++;
-
-		cout << "POST QUAD IND: " << ind << endl;
-	}
-
-	cout << "ind: " << ind << endl;
-	NumIdcs[3] = NewFaceVertCount;
-	VertexBufferSize[3] = sizeof(NewFaceVerts[0]) * NewFaceVertCount;
-	IndexBufferSize[3] = sizeof(GLushort) * NewFaceVertCount;
-	createVAOs(NewFaceVerts, NewFaceIndices, 3);
-
-	cout << NewFaceVerts[0].Position[0] << " " << NewFaceVerts[0].Position[1] << " " << NewFaceVerts[0].Position[2] << endl;
-	/*IndexCount = prevPos.size();
-	const int NewIndexCount = IndexCount;
-	Vertex NewVerts[5000];
-
-	for (int i = 0; i < IndexCount; i++) {
-		NewVerts[i].SetPosition(new float[4] {prevPos[i][0], prevPos[i][1], prevPos[i][2], 1});
-		NewVerts[i].SetNormal(new float[4] {prevNorms[i][0], prevNorms[i][1], prevNorms[i][2], 1});
-		NewVerts[i].SetColor(new float[4] {Verts[i][0], prevPos[i][1], prevPos[i][2], 1});
-		NewVerts[i].SetPosition(new float[4] {prevPos[i][0], prevPos[i][1], prevPos[i][2], 1});
-	}
-
-	Verts = NewVerts;*/
-}
-
 void renderScene(float deltaTime) {
 	//ATTN: DRAW YOUR SCENE HERE. MODIFY/ADAPT WHERE NECESSARY!
 
@@ -766,6 +571,7 @@ void renderScene(float deltaTime) {
 	glClearColor(0.0f, 0.0f, 0.2f, 0.0f);
 	// Re-clear the screen for real rendering
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_CULL_FACE);
 
 	glm::mat4x4 ModelMatrix = glm::mat4(1.0);
 	glm::vec3 lightPos = vec3(cameraPos.x - 2, cameraPos.y, cameraPos.z - 2);
@@ -780,6 +586,7 @@ void renderScene(float deltaTime) {
 	}
 	glUseProgram(programID);
 	{	
+		//glUniform1f(TessLevelID, 1.f);
 		glUniform3fv(LightID, 2, (GLfloat*)lightPosArray);
 		glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &gViewMatrix[0][0]);
 		glUniformMatrix4fv(ProjMatrixID, 1, GL_FALSE, &gProjectionMatrix[0][0]);
@@ -792,18 +599,20 @@ void renderScene(float deltaTime) {
 		glDrawArrays(GL_LINES, 0, NumVerts[1]);
 		
 		//glBindTexture(GL_TEXTURE_2D, TextureBufferId[2]);
-		
-		
-			glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
+		//if (tessellationOn) TessLvl = 5.f;
+		//else TessLvl = 1.f;
 
-			glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
+		//glUniform1f(TessLevelID, TessLvl);
+		//glPatchParameteri(GL_PATCH_VERTICES, 3);
+		glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
+		glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
 		
 
 		glBindVertexArray(0);
 	}
 
-	if (genTriangles) {
-		/*glUseProgram(tessProgramID);
+	if (tessellationOn) {
+		glUseProgram(tessProgramID);
 		{
 			glUniform3fv(TessLightID, 2, (GLfloat*)lightPosArray);
 			glUniformMatrix4fv(TessViewMatrixID, 1, GL_FALSE, &gViewMatrix[0][0]);
@@ -817,7 +626,7 @@ void renderScene(float deltaTime) {
 			glDrawElements(GL_PATCHES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
 
 			glBindVertexArray(0);
-		}*/
+		}
 
 		
 		glUseProgram(tessQuadProgramID);
@@ -829,7 +638,7 @@ void renderScene(float deltaTime) {
 
 			glUniform1f(TessLevelQuadID, TessLvl);
 
-			glPatchParameteri(GL_PATCH_VERTICES, 4);
+			glPatchParameteri(GL_PATCH_VERTICES, 3);
 			glBindVertexArray(VertexArrayId[2]);
 			glDrawElements(GL_PATCHES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
 
@@ -856,6 +665,8 @@ void cleanup(void) {
 	}
 	glDeleteProgram(programID);
 	glDeleteProgram(pickingProgramID);
+	glDeleteProgram(tessProgramID);
+	glDeleteProgram(tessQuadProgramID);
 
 	// Close OpenGL window and terminate GLFW
 	glfwTerminate();
@@ -886,7 +697,7 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 			fPress = !fPress;
 			break;
 		case GLFW_KEY_P:
-			genTriangles = !genTriangles;
+			tessellationOn = !tessellationOn;
 			break;
 		case GLFW_KEY_U:
 			uPress = !uPress;
@@ -1005,3 +816,199 @@ int main(void) {
 
 	return 0;
 }
+
+//void genPNTrianglesAndQuads(Vertex* Verts, size_t& IndexCount) {
+	//	//if (!tessellationOn) return;
+	//
+	//	tessellationOn = false;
+	//	int ind = 0;
+	//
+	//	/*vector<vec3> prevPos, prevNorms;
+	//	for (int i = 0; i < IndexCount; i++) {
+	//		vec3 P1 = vec3(Verts[i].Position[0], Verts[i].Position[1], Verts[i].Position[2]);
+	//		vec3 N1 = vec3(Verts[i].Normal[0], Verts[i].Normal[1], Verts[i].Normal[2]);
+	//		prevPos.push_back(P1);
+	//		prevNorms.push_back(N1);
+	//	}*/
+	//
+	//	for (int i = 0; i < IndexCount; i++) {
+	//		int first = i, second = (i + 1) % IndexCount, third = (i + 2) % IndexCount, fourth = (i + 3) % IndexCount;
+	//		
+	//		vec3 P1 = vec3(Verts[first].Position[0], Verts[first].Position[1], Verts[first].Position[2]);
+	//		vec3 P2 = vec3(Verts[second].Position[0], Verts[second].Position[1], Verts[second].Position[2]);
+	//		vec3 P3 = vec3(Verts[third].Position[0], Verts[third].Position[1], Verts[third].Position[2]);
+	//		vec3 P4 = vec3(Verts[fourth].Position[0], Verts[fourth].Position[1], Verts[fourth].Position[2]);
+	//
+	//		vec3 N1 = vec3(Verts[first].Normal[0], Verts[first].Normal[1], Verts[first].Normal[2]);
+	//		vec3 N2 = vec3(Verts[second].Normal[0], Verts[second].Normal[1], Verts[second].Normal[2]);
+	//		vec3 N3 = vec3(Verts[third].Normal[0], Verts[third].Normal[1], Verts[third].Normal[2]);
+	//		vec3 N4 = vec3(Verts[fourth].Normal[0], Verts[fourth].Normal[1], Verts[fourth].Normal[2]);
+	//
+	//		vec2 UV1 = vec2(Verts[first].UV[0], Verts[first].UV[1]);
+	//		vec2 UV2 = vec2(Verts[second].UV[0], Verts[second].UV[1]);
+	//		vec2 UV3 = vec2(Verts[third].UV[0], Verts[third].UV[1]);
+	//		vec2 UV4 = vec2(Verts[fourth].UV[0], Verts[fourth].UV[1]);
+	//
+	//		vec3 C1 = vec3(Verts[first].Color[0], Verts[first].Color[1], Verts[first].Color[2]);
+	//		vec3 C2 = vec3(Verts[second].Color[0], Verts[second].Color[1], Verts[second].Color[2]);
+	//		vec3 C3 = vec3(Verts[third].Color[0], Verts[third].Color[1], Verts[third].Color[2]);
+	//		vec3 C4 = vec3(Verts[fourth].Color[0], Verts[fourth].Color[1], Verts[fourth].Color[2]);
+	//
+	//		vec3 b300 = P1, b030 = P2, b003 = P3;
+	//		float w12 = dot((P2 - P1), N1), w21 = dot((P1 - P2), N2), w23 = dot((P3 - P2), N2), w32 = dot((P2 - P3), N3), w13 = dot((P3 - P1), N1), w31 = dot((P1 - P3), N3);
+	//
+	//		vec3 b210 = (2.f * P1 + P2 - w12 * N1) / 3.f;
+	//		vec3 b120 = (2.f * P2 + P1 - w21 * N2) / 3.f;
+	//		vec3 b021 = (2.f * P2 + P3 - w23 * N2) / 3.f;
+	//		vec3 b012 = (2.f * P3 + P2 - w32 * N3) / 3.f;
+	//		vec3 b102 = (2.f * P3 + P1 - w31 * N3) / 3.f;
+	//		vec3 b201 = (2.f * P1 + P3 - w13 * N1) / 3.f;
+	//
+	//		vec3 E = (b210 + b120 + b021 + b012 + b102 + b201) / 6.f;
+	//		vec3 V = (P1 + P2 + P3) / 3.f;
+	//
+	//		vec3 b111 = E + (E - V) / 2.f;
+	//
+	//		vec3 n200 = N1, n020 = N2, n002 = N3;
+	//		float v12 = 2.f * dot((P2 - P1), (N1 + N2)) / dot((P2 - P1), (P2 - P1));
+	//		float v23 = 2.f * dot((P3 - P2), (N2 + N3)) / dot((P3 - P2), (P3 - P2));
+	//		float v31 = 2.f * dot((P3 - P1), (N3 + N1)) / dot((P3 - P1), (P3 - P1));
+	//		
+	//		vec3 h110 = N1 + N2 - v12 * (P2 - P1), h011 = N2 + N3 - v23 * (P3 - P2), h101 = N3 + N1 - v31 * (P1 - P3);
+	//		vec3 n110 = normalize(h110), n011 = normalize(h011), n101 = normalize(h101);
+	//
+	//		//float u = Verts[i].UV[0], v = Verts[i].UV[1], w = 1 - u - v;
+	//		
+	//		vec2 avgUV = (UV1 + UV2 + UV3) / 3.f;
+	//		vec3 avgColor = (C1 + C2 + C3) / 3.f;
+	//
+	//		//cout << "before loop: " << ind<< endl;
+	//		for (float u = 0; u <= 1; u += 0.4) {
+	//			for (float v = 0; u + v <= 1; v += 0.4) {
+	//				float w = 1 - u - v;
+	//				vec3 buv = b300 * w * w * w + b030 * u * u * u + b003 * v * v * v + b210 * 3.f * w * w * u
+	//					+ b120 * 3.f * w * u * u + b201 * 3.f * w * w * v + b021 * 3.f * u * u * v + b102 * 3.f * w * v * v
+	//					+ b012 * 3.f * u * v * v + b111 * 6.f * w * v * u;
+	//
+	//				vec3 nuv = n200 * w * w + n020 * u * u + n002 * v * v + n110 * w * u + n011 * u * v + n101 * w * v;
+	//
+	//				NewFaceVerts[ind].SetPosition(new float[4] {buv[0], buv[1], buv[2], 1});
+	//				//cout << buv[0] << " " << buv[1] << " " << buv[2] << endl;
+	//				NewFaceVerts[ind].SetNormal(new float[3] {nuv[0], nuv[1], nuv[2]});
+	//				//NewFaceVerts[ind].SetColor(new float[4] {avgColor[0], avgColor[1], avgColor[2], 1});
+	//				NewFaceVerts[ind].SetColor(new float[4] {avgColor[0], avgColor[1], avgColor[2], 1});
+	//				NewFaceVerts[ind].SetUV(new float[2] {avgUV[0], avgUV[1]});
+	//
+	//				NewFaceIndices[ind] = FaceIndices[first] + ind;
+	//				ind++;
+	//			}
+	//		}
+	//
+	//		cout << "PRE QUAD IND: " << ind << endl;
+	//
+	//		//quad calculation
+	//
+	//		vec3 b0 = P1, b1 = P2, b3 = P3, b4 = P4, n0 = N1, n1 = N2, n2 = N3, n3 = N4;
+	//		vector<vector<vec3>> b(4, vector<vec3>(4));
+	//
+	//		vec3 b01 = (2.f * P1 + P2 - dot(P2 - P1, N1) * N1) / 3.f;
+	//		vec3 b32 = (2.f * P4 + P3 - dot(P3 - P4, N4) * N4) / 3.f;
+	//		vec3 b03 = (2.f * P1 + P4 - dot(P4 - P1, N1) * N1) / 3.f;
+	//		vec3 b30 = (2.f * P1 + P4 - dot(P1 - P4, N4) * N4) / 3.f;
+	//		vec3 b10 = (2.f * P2 + P1 - dot(P1 - P2, N2) * N2) / 3.f;
+	//		vec3 b23 = (2.f * P3 + P4 - dot(P4 - P3, N3) * N3) / 3.f;
+	//		vec3 b12 = (2.f * P2 + P3 - dot(P3 - P2, N2) * N2) / 3.f;
+	//		vec3 b21 = (2.f * P3 + P2 - dot(P2 - P3, N3) * N3) / 3.f;
+	//
+	//		float v01 = 2.f * dot((P2 - P1), (N1 + N2)) / dot((P2 - P1), (P2 - P1));
+	//		float v12q = 2.f * dot((P3 - P2), (N2 + N3)) / dot((P3 - P2), (P3 - P2));
+	//		float v23q = 2.f * dot((P4 - P3), (P3 + P4)) / dot((P4 - P3), (P4 - P3));
+	//		float v30 = 2.f * dot((P1 - P4), (P4 + P1)) / dot((P1 - P4), (P1 - P4));
+	//
+	//		vec3 h01 = N1 + N2 - v01 * (P2 - P1);
+	//		vec3 h12 = N2 + N3 - v12q * (P3 - P2);
+	//		vec3 h23 = N3 + N4 - v23q * (P4 - P3);
+	//		vec3 h30 = N4 + N1 - v30 * (N1 - N4);
+	//
+	//		vec3 n01 = normalize(h01), n12 = normalize(h12), n23 = normalize(h23), n30 = normalize(h30);
+	//		vec3 q = b03 + b01 + b10 + b12 + b21 + b23 + b32 + b30;
+	//		
+	//		vec3 E0 = (2.f * (b01 + b03 + q) - (b21 + b23)) / 18.f;
+	//		vec3 V0 = ((4.f * P1) + 2.f * (P4 + P2) + P3) / 9.f;
+	//
+	//		vec3 E1 = (2.f * (b12 + b10 + q) - (b32 + b30)) / 18.f;
+	//		vec3 V1 = ((4.f * P2) + 2.f * (P1 + P3) + P4) / 9.f;
+	//
+	//		vec3 E2 = (2.f * (b23 + b21 + q) - (b03 + b01)) / 18.f;
+	//		vec3 V2 = ((4.f * P3) + 2.f * (P2 + P4) + P1) / 9.f;
+	//
+	//		vec3 E3 = (2.f * (b30 + b32 + q) - (b10 + b12)) / 18.f;
+	//		vec3 V3 = ((4.f * P4) + 2.f * (P3 + P1) + P2) / 9.f;
+	//		
+	//		float sigma = 0.5f;
+	//
+	//		vec3 b02 = (1 + sigma) * E0 - sigma * V0;
+	//		vec3 b31 = (1 + sigma) * E3 - sigma * E3;
+	//		vec3 b13 = (1 + sigma) * E1 - sigma * E1;
+	//		vec3 b20 = (1 + sigma) * E2 - sigma * E2;
+	//
+	//		vec3 n0123 = (2.f * (n01 + n12 + n23 + n30) + (n0 + n1 + n2 + n3)) / 12.f;
+	//
+	//		vec3 avgColorQuad = (C1 + C2 + C3 + C4) / 4.f;
+	//		vec2 avgUVQuad = (UV1 + UV2 + UV3 + UV4) / 4.f;
+	//
+	//		NewFaceVerts[ind].SetPosition(new float[4] {b02[0], b02[1], b02[2], 1});
+	//		NewFaceVerts[ind].SetNormal(new float[3] {n0123[0], n0123[1], n0123[2]});
+	//		NewFaceVerts[ind].SetColor(new float[4] {avgColorQuad[0], avgColorQuad[1], avgColorQuad[2], 1});
+	//		NewFaceVerts[ind].SetUV(new float[2] {avgUVQuad[0], avgUVQuad[1]});
+	//		
+	//		NewFaceIndices[ind] = FaceIndices[first] + ind;
+	//		ind++;
+	//
+	//		NewFaceVerts[ind].SetPosition(new float[4] {b31[0], b31[1], b31[2], 1});
+	//		NewFaceVerts[ind].SetNormal(new float[3] {n0123[0], n0123[1], n0123[2]});
+	//		NewFaceVerts[ind].SetColor(new float[4] {avgColorQuad[0], avgColorQuad[1], avgColorQuad[2], 1});
+	//		NewFaceVerts[ind].SetUV(new float[2] {avgUVQuad[0], avgUVQuad[1]});
+	//
+	//		NewFaceIndices[ind] = FaceIndices[first] + ind;
+	//		ind++;
+	//
+	//		NewFaceVerts[ind].SetPosition(new float[4] {b13[0], b13[1], b13[2], 1});
+	//		NewFaceVerts[ind].SetNormal(new float[3] {n0123[0], n0123[1], n0123[2]});
+	//		NewFaceVerts[ind].SetColor(new float[4] {avgColorQuad[0], avgColorQuad[1], avgColorQuad[2], 1});
+	//		NewFaceVerts[ind].SetUV(new float[2] {avgUVQuad[0], avgUVQuad[1]});
+	//
+	//		NewFaceIndices[ind] = FaceIndices[first] + ind;
+	//		ind++;
+	//
+	//		NewFaceVerts[ind].SetPosition(new float[4] {b20[0], b20[1], b20[2], 1});
+	//		NewFaceVerts[ind].SetNormal(new float[3] {n0123[0], n0123[1], n0123[2]});
+	//		NewFaceVerts[ind].SetColor(new float[4] {avgColorQuad[0], avgColorQuad[1], avgColorQuad[2], 1});
+	//		NewFaceVerts[ind].SetUV(new float[2] {avgUVQuad[0], avgUVQuad[1]});
+	//
+	//		NewFaceIndices[ind] = FaceIndices[first] + ind;
+	//		ind++;
+	//
+	//		cout << "POST QUAD IND: " << ind << endl;
+	//	}
+	//
+	//	cout << "ind: " << ind << endl;
+	//	NumIdcs[3] = NewFaceVertCount;
+	//	VertexBufferSize[3] = sizeof(NewFaceVerts[0]) * NewFaceVertCount;
+	//	IndexBufferSize[3] = sizeof(GLushort) * NewFaceVertCount;
+	//	createVAOs(NewFaceVerts, NewFaceIndices, 3);
+	//
+	//	cout << NewFaceVerts[0].Position[0] << " " << NewFaceVerts[0].Position[1] << " " << NewFaceVerts[0].Position[2] << endl;
+	//	/*IndexCount = prevPos.size();
+	//	const int NewIndexCount = IndexCount;
+	//	Vertex NewVerts[5000];
+	//
+	//	for (int i = 0; i < IndexCount; i++) {
+	//		NewVerts[i].SetPosition(new float[4] {prevPos[i][0], prevPos[i][1], prevPos[i][2], 1});
+	//		NewVerts[i].SetNormal(new float[4] {prevNorms[i][0], prevNorms[i][1], prevNorms[i][2], 1});
+	//		NewVerts[i].SetColor(new float[4] {Verts[i][0], prevPos[i][1], prevPos[i][2], 1});
+	//		NewVerts[i].SetPosition(new float[4] {prevPos[i][0], prevPos[i][1], prevPos[i][2], 1});
+	//	}
+	//
+	//	Verts = NewVerts;*/
+	//}

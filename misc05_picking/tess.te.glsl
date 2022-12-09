@@ -10,18 +10,19 @@ struct FragData
 
 struct OutputPatch                                                                              
 {                                                                                               
-    vec3 WorldPos_B030;                                                                         
-    vec3 WorldPos_B021;                                                                         
-    vec3 WorldPos_B012;                                                                         
-    vec3 WorldPos_B003;                                                                         
-    vec3 WorldPos_B102;                                                                         
-    vec3 WorldPos_B201;                                                                         
-    vec3 WorldPos_B300;                                                                         
-    vec3 WorldPos_B210;                                                                         
-    vec3 WorldPos_B120;                                                                         
-    vec3 WorldPos_B111;                                                                         
+    vec3 B030;                                                                         
+    vec3 B021;                                                                         
+    vec3 B012;                                                                         
+    vec3 B003;                                                                         
+    vec3 B102;                                                                         
+    vec3 B201;                                                                         
+    vec3 B300;                                                                         
+    vec3 B210;                                                                         
+    vec3 B120;                                                                         
+    vec3 B111;                                                                         
     vec3 Normal[3];                                                                             
     vec2 TexCoord[3];
+    vec3  Color[3];
 };   
 
 layout(triangles, equal_spacing, ccw) in;
@@ -64,10 +65,10 @@ void main() {
     float uPow2 = pow(u, 2);                                                                    
     float vPow2 = pow(v, 2);                                                                    
     float wPow2 = pow(w, 2);                                                                    
-    vec3 pos = oPatch.WorldPos_B300 * wPow3 + oPatch.WorldPos_B030 * uPow3 + oPatch.WorldPos_B003 * vPow3 +                               
-                     oPatch.WorldPos_B210 * 3.0 * wPow2 * u + oPatch.WorldPos_B120 * 3.0 * w * uPow2 + oPatch.WorldPos_B201 * 3.0 * wPow2 * v + 
-                     oPatch.WorldPos_B021 * 3.0 * uPow2 * v + oPatch.WorldPos_B102 * 3.0 * w * vPow2 + oPatch.WorldPos_B012 * 3.0 * u * vPow2 + 
-                     oPatch.WorldPos_B111 * 6.0 * w * u * v;
+    vec3 pos = oPatch.B300 * wPow3 + oPatch.B030 * uPow3 + oPatch.B003 * vPow3 +                               
+                     oPatch.B210 * 3.0 * wPow2 * u + oPatch.B120 * 3.0 * w * uPow2 + oPatch.B201 * 3.0 * wPow2 * v + 
+                     oPatch.B021 * 3.0 * uPow2 * v + oPatch.B102 * 3.0 * w * vPow2 + oPatch.B012 * 3.0 * u * vPow2 + 
+                     oPatch.B111 * 6.0 * w * u * v;
 
     fragdata.position = pos;
     gl_Position = P * V * M * vec4(pos, 1.0);

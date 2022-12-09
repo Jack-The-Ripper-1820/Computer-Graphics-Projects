@@ -23,7 +23,7 @@ struct OutputPatch
 };  
 
 
-layout (vertices = 4) out;
+layout (vertices = 3) out;
 uniform float TessellationLevel;
 
 in vec3 WorldPos_CS_in[];    
@@ -66,7 +66,7 @@ void CalcPositions()
 
 	
 
-    oPatch.B10 = oPatch.B1 + EdgeB01 / 3.0;
+    /*oPatch.B10 = oPatch.B1 + EdgeB01 / 3.0;
     oPatch.B01 = oPatch.B1 + EdgeB01 * 2.0 / 3.0;
     oPatch.B21 = oPatch.B2 + EdgeB12 / 3.0;
     oPatch.B12 = oPatch.B2 + EdgeB12 * 2.0 / 3.0;
@@ -74,6 +74,7 @@ void CalcPositions()
     oPatch.B23 = oPatch.B3 + EdgeB23 * 2.0 / 3.0;
     oPatch.B03 = oPatch.B0 + EdgeB30 / 3.0;
     oPatch.B30 = oPatch.B0 + EdgeB30 * 2.0 / 3.0;
+    
 
     oPatch.B10 = ProjectToPlane(oPatch.B10, oPatch.B1, n0);
     oPatch.B01 = ProjectToPlane(oPatch.B01, oPatch.B1, n1);
@@ -83,8 +84,9 @@ void CalcPositions()
     oPatch.B23 = ProjectToPlane(oPatch.B23, oPatch.B3, n3);
     oPatch.B03 = ProjectToPlane(oPatch.B03, oPatch.B0, n3);
     oPatch.B30 = ProjectToPlane(oPatch.B30, oPatch.B0, n0);
+    */
 
-    /*float w01 = dot(p1 - p0, n0);
+    float w01 = dot(p1 - p0, n0);
 	float w10 = dot(p0 - p1, n1);
 	float w12 = dot(p2 - p1, n1);
 	float w21 = dot(p1 - p2, n2);
@@ -109,9 +111,9 @@ void CalcPositions()
     oPatch.B23 = b23;
     oPatch.B32 = b32;
     oPatch.B30 = b30;
-    oPatch.B03 = b03;*/
+    oPatch.B03 = b03;
 
-    vec3 b01 = oPatch.B01;
+    /*vec3 b01 = oPatch.B01;
     vec3 b10 = oPatch.B10;
     vec3 b12 = oPatch.B12;
     vec3 b21 = oPatch.B21;
@@ -119,10 +121,13 @@ void CalcPositions()
     vec3 b32 = oPatch.B32;
     vec3 b30 = oPatch.B30;
     vec3 b03 = oPatch.B03;
+    */
 
-    vec3 q = b01 + b10 + b12 + b21 + b23 + b32 + b30 + b03;
+    //vec3 q = b01 + b10 + b12 + b21 + b23 + b32 + b30 + b03;
 	
-	vec3 e0 = (2.*(b01 + b03 + q) - (b21 + b23)) / 18.;
+    vec3 q = b03 + b01 + b10 + b12 + b21 + b23 + b32 + b30;
+	
+    vec3 e0 = (2.*(b01 + b03 + q) - (b21 + b23)) / 18.;
 	vec3 v0 = (4.*p0 + 2.*(p3 + p1) + p2) / 9.;
 	vec3 b02 = e0 + (e0 - v0) / 2.;
     oPatch.B02 = b02;
