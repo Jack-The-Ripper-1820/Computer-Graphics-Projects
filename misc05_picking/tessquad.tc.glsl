@@ -53,7 +53,7 @@ void CalcPositions()
         oPatch.Normal[i] = Normal_CS_in[i];                                                     
         oPatch.TexCoord[i] = TexCoord_CS_in[i];
     }   
-	
+
     vec3 n0 = oPatch.Normal[0];
 	vec3 n1 = oPatch.Normal[1];
 	vec3 n2 = oPatch.Normal[2];

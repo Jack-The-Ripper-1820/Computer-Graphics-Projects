@@ -62,7 +62,7 @@ void CalcPositions()
     vec3 Center = (oPatch.WorldPos_B003 + oPatch.WorldPos_B030 + oPatch.WorldPos_B300) / 3.0;                
     oPatch.WorldPos_B111 = (oPatch.WorldPos_B021 + oPatch.WorldPos_B012 + oPatch.WorldPos_B102 +             
                             oPatch.WorldPos_B201 + oPatch.WorldPos_B210 + oPatch.WorldPos_B120) / 6.0;       
-    oPatch.WorldPos_B111 += (oPatch.WorldPos_B111 - Center) / 2.0;                              
+    oPatch.WorldPos_B111 += (oPatch.WorldPos_B111 - Center) / 2.0;    
 } 
 
 

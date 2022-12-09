@@ -495,8 +495,11 @@ void createObjects(void) {
 	Vertex* Verts;
 	GLushort* Idcs;
 	size_t VertCount, IdxCount;
+	//loadObject("models/cube.obj", glm::vec4(1), Verts, Idcs, VertCount, IdxCount, 2);
 	loadObject("models/face-stencil.obj", glm::vec4(1), Verts, Idcs, VertCount, IdxCount, 2);
 	//loadObject("models/HeadWithTexture.obj", glm::vec4(1), Verts, Idcs, VertCount, IdxCount, 2);
+	//loadObject("models/face-stencil-nt.obj", glm::vec4(1), Verts, Idcs, VertCount, IdxCount, 2);
+
 	createVAOs(Verts, Idcs, 2);
 	FaceVerts = Verts;
 	FaceVertCount = VertCount;
@@ -789,15 +792,18 @@ void renderScene(float deltaTime) {
 		glDrawArrays(GL_LINES, 0, NumVerts[1]);
 		
 		//glBindTexture(GL_TEXTURE_2D, TextureBufferId[2]);
-		glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
+		
+		
+			glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
 
-		glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);		
+			glDrawElements(GL_TRIANGLES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
+		
 
 		glBindVertexArray(0);
 	}
 
 	if (genTriangles) {
-		glUseProgram(tessProgramID);
+		/*glUseProgram(tessProgramID);
 		{
 			glUniform3fv(TessLightID, 2, (GLfloat*)lightPosArray);
 			glUniformMatrix4fv(TessViewMatrixID, 1, GL_FALSE, &gViewMatrix[0][0]);
@@ -811,10 +817,10 @@ void renderScene(float deltaTime) {
 			glDrawElements(GL_PATCHES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
 
 			glBindVertexArray(0);
-		}
+		}*/
 
 		
-		/*glUseProgram(tessQuadProgramID);
+		glUseProgram(tessQuadProgramID);
 		{
 			glUniform3fv(TessLightQuadID, 2, (GLfloat*)lightPosArray);
 			glUniformMatrix4fv(TessViewMatrixQuadID, 1, GL_FALSE, &gViewMatrix[0][0]);
@@ -828,7 +834,7 @@ void renderScene(float deltaTime) {
 			glDrawElements(GL_PATCHES, NumIdcs[2], GL_UNSIGNED_SHORT, (void*)0);
 
 			glBindVertexArray(0);
-		}*/
+		}
 	}
 	glUseProgram(0);
 	// Draw GUI

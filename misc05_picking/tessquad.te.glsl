@@ -94,8 +94,61 @@ void main() {
            + bu1 * (bv0 * oPatch.B03 + bv1 * oPatch.B02 + bv2 * oPatch.B13 + bv3 * oPatch.B12) 
            + bu2 * (bv0 * oPatch.B30 + bv1 * oPatch.B31 + bv2 * oPatch.B20 + bv3 * oPatch.B21) 
            + bu3 * (bv0 * oPatch.B3 + bv1 * oPatch.B32 + bv2 * oPatch.B23 + bv3 * oPatch.B2);
+    
+    vec2 t0 = oPatch.TexCoord[0];
+	vec2 t1 = oPatch.TexCoord[1];
+	vec2 t2 = oPatch.TexCoord[2];
+	vec2 t3 = oPatch.TexCoord[3];
 
+    vec3 n0 = oPatch.Normal[0];
+	vec3 n1 = oPatch.Normal[1];
+	vec3 n2 = oPatch.Normal[2];
+	vec3 n3 = oPatch.Normal[3];
+
+    vec3 p0 = oPatch.B0, p1 = oPatch.B1, p2 = oPatch.B2, p3 = oPatch.B3;
+
+
+    float tu0 = (1.-u);
+	float tu1 = u;
+	
+	float tv0 = (1.-v);
+	float tv1 = v;
+	
+	//fragdata.uv = (t0 + t1 + t2 + t3) / 4.0;
+    //fragdata.uv = tu0*(tv0*t0 + tv1*t1)
+                   + tu1*(tv0*t3 + tv1*t2);
+    //fragdata.uv = (1 - u)(1 - v) * t0 + 
+	
+	float v01 = (2.*(dot(p1 - p0, n0 + n1) / dot(p1 - p0, p1 - p0)));
+	float v12 = (2.*(dot(p2 - p1, n1 + n2) / dot(p2 - p1, p2 - p1)));
+	float v23 = (2.*(dot(p3 - p2, n2 + n3) / dot(p3 - p2, p3 - p2)));
+	float v30 = (2.*(dot(p0 - p3, n3 + n0) / dot(p0 - p3, p0 - p3)));
+	
+	vec3 n01 = normalize(n0 + n1 - v01*(p1 - p0));
+	vec3 n12 = normalize(n1 + n2 - v12*(p2 - p1));
+	vec3 n23 = normalize(n2 + n3 - v23*(p3 - p2));
+	vec3 n30 = normalize(n3 + n0 - v30*(p0 - p3));
+	
+	vec3 n0123 = ((2.*(n01 + n12 + n23 + n30)) + (n0 + n1 + n2 + n3)) / 12.;
+	
+	float nu0 = (1.-u) * (1.-u);
+	float nu1 = 2. * u * (1.-u);
+	float nu2 = u * u;
+	
+	float nv0 = (1.-v) * (1.-v);
+	float nv1 = 2. * v * (1.-v);
+	float nv2 = v * v;
+	
+	/*fragdata.normal = nu0*(nv0*n0 + nv1*n01 + nv2*n1)
+                + nu1*(nv0*n30 + nv1*n0123 + nv2*n12)
+                + nu2*(nv0*n3 + nv1*n23 + nv2*n2);*/
+
+    //fragdata.normal = vec3(0);
     fragdata.position = pos;
+
+
+
+
     gl_Position = P * V * M * vec4(pos, 1.0);
 
     position_worldspace = (M * vec4(pos, 1.0)).xyz;
