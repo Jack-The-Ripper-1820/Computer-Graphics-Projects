@@ -1,4 +1,14 @@
 // Include standard headers
+/*
+TASK 3 + BONUS IMPLEMENTED WITH TESSELLATION ENGINE
+
+SIMPLIFIED INPUTS (The inputs given in the project description were vague, hence here are my simplified inputs:
+	ARROW KEYS = CAMERA MOVEMENT
+	F KEY = WIREFRAME MODE ON/OFF
+	U KEY = TEXTURE ON/OFF
+	P KEY = TESSELLATION ENGINE ON/OFF (PN TRIANGLES AND PN QUADS USING TESSELLATION SHADERS)
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
@@ -85,7 +95,7 @@ glm::mat4 gProjectionMatrix;
 glm::mat4 gViewMatrix;
 
 GLuint gPickedIndex = -1;
-std::string gMessage, msg1, msg2;
+std::string gMessage, msg;
 
 GLuint programID;
 GLuint headProgramID;
@@ -149,7 +159,7 @@ size_t FaceVertCount, FaceIndexCount;
 Vertex* FaceVerts;
 GLushort* FaceIndices;
 
-bool cPress = false, rPress = false, tessellationOn = false, fPress = false, tessFlag = false, uPress = false;
+bool cPress = false, rPress = false, tessellationOn = false, fPress = false, tessFlag = false, uPress = false, capPress = false;
 
 int initWindow(void) {
 	// Initialise GLFW
@@ -186,8 +196,6 @@ int initWindow(void) {
 	TwBar* GUI = TwNewBar("Status ");
 	TwSetParam(GUI, NULL, "refresh", TW_PARAM_CSTRING, 1, "0.1");
 	TwAddVarRW(GUI, "Tessellation: ", TW_TYPE_STDSTRING, &gMessage, NULL);
-	TwAddVarRW(GUI, "PNTriangles: ", TW_TYPE_STDSTRING, &msg1, NULL);
-	TwAddVarRW(GUI, "PNQuads: ", TW_TYPE_STDSTRING, &msg2, NULL);
 
 	// Set up inputs
 	glfwSetCursorPos(window, window_width / 2, window_height / 2);
@@ -341,7 +349,6 @@ void addTexture(int ObjectId) {
 	if (uPress) {
 		if (Data)
 		{
-			cout << "for objectId: " << ObjectId << endl;
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, Data);
 			glGenerateMipmap(GL_TEXTURE_2D);
 		}
@@ -350,12 +357,10 @@ void addTexture(int ObjectId) {
 			std::cout << "Failed to load texture" << std::endl;
 		}
 	}
-
 	else {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 		glGenerateMipmap(GL_TEXTURE_2D);
 	}
-
 }
 
 // Ensure your .obj files are in the correct format and properly loaded by looking at the following function
@@ -551,6 +556,7 @@ void renderScene(float deltaTime) {
 		glBindVertexArray(0);
 	}
 
+	
 	glUseProgram(headProgramID);
 	{
 		glUniform3fv(HeadLightID, 2, (GLfloat*)lightPosArray);
@@ -595,6 +601,7 @@ void renderScene(float deltaTime) {
 
 		glBindVertexArray(0);
 	}
+	
 	
 	glUseProgram(0);
 	// Draw GUI
@@ -643,13 +650,11 @@ static void keyCallback(GLFWwindow* window, int key, int scancode, int action, i
 			break;
 		case GLFW_KEY_F:
 			fPress = !fPress;
-			if (!tessellationOn) addTexture(2);
 			break;
 		case GLFW_KEY_P:
 			tessellationOn = !tessellationOn;
 			break;
 		case GLFW_KEY_U:
-			if (!tessellationOn) break;
 			uPress = !uPress;
 			addTexture(2);
 		default:

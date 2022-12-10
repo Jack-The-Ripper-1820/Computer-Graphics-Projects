@@ -48,12 +48,7 @@ uniform mat4 M;
 uniform mat4 V;
 uniform mat4 P;
 uniform vec3 lightPosition_worldspace[2];
-uniform highp sampler2D myTextureSampler;
-
-vec2 interpolate2D(vec2 v0, vec2 v1, vec2 v2)                                                   
-{                                                                                               
-    return vec2(gl_TessCoord.x) * v0 + vec2(gl_TessCoord.y) * v1 + vec2(gl_TessCoord.z) * v2;   
-}                                                                                               
+uniform highp sampler2D myTextureSampler;                                                                                             
                                                                                                 
 vec3 interpolate3D(vec3 v0, vec3 v1, vec3 v2)                                                   
 {                                                                                               
@@ -66,22 +61,25 @@ void main() {
     
     float u = gl_TessCoord.x;                                                                   
     float v = gl_TessCoord.y;                                                                   
-    float w = gl_TessCoord.z;                                                                   
-    float uPow3 = pow(u, 3);                                                                    
-    float vPow3 = pow(v, 3);                                                                    
-    float wPow3 = pow(w, 3);                                                                    
-    float uPow2 = pow(u, 2);                                                                    
-    float vPow2 = pow(v, 2);                                                                    
-    float wPow2 = pow(w, 2);                                                                    
-    vec3 pos = oPatch.B300 * wPow3 + oPatch.B030 * uPow3 + oPatch.B003 * vPow3 +                               
-                     oPatch.B210 * 3.0 * wPow2 * u + oPatch.B120 * 3.0 * w * uPow2 + oPatch.B201 * 3.0 * wPow2 * v + 
-                     oPatch.B021 * 3.0 * uPow2 * v + oPatch.B102 * 3.0 * w * vPow2 + oPatch.B012 * 3.0 * u * vPow2 + 
+    float w = gl_TessCoord.z;        
+
+    float u3 = pow(u, 3);                                                                    
+    float v3 = pow(v, 3);                                                                    
+    float w3 = pow(w, 3);                                                                    
+    float u2 = pow(u, 2);                                                                    
+    float v2 = pow(v, 2);                                                                    
+    float w2 = pow(w, 2);
+    
+    vec3 pos = oPatch.B300 * w3 + oPatch.B030 * u3 + oPatch.B003 * v3 +                               
+                     oPatch.B210 * 3.0 * w2 * u + oPatch.B120 * 3.0 * w * u2 + oPatch.B201 * 3.0 * w2 * v + 
+                     oPatch.B021 * 3.0 * u2 * v + oPatch.B102 * 3.0 * w * v2 + oPatch.B012 * 3.0 * u * v2 + 
                      oPatch.B111 * 6.0 * w * u * v;
 
-    vec2 tex = oPatch.T300 * wPow3 + oPatch.T030 * uPow3 + oPatch.T003 * vPow3 +                               
-                     oPatch.T210 * 3.0 * wPow2 * u + oPatch.T120 * 3.0 * w * uPow2 + oPatch.T201 * 3.0 * wPow2 * v + 
-                     oPatch.T021 * 3.0 * uPow2 * v + oPatch.T102 * 3.0 * w * vPow2 + oPatch.T012 * 3.0 * u * vPow2 + 
+    vec2 tex = oPatch.T300 * w3 + oPatch.T030 * u3 + oPatch.T003 * v3 +                               
+                     oPatch.T210 * 3.0 * w2 * u + oPatch.T120 * 3.0 * w * u2 + oPatch.T201 * 3.0 * w2 * v + 
+                     oPatch.T021 * 3.0 * u2 * v + oPatch.T102 * 3.0 * w * v2 + oPatch.T012 * 3.0 * u * v2 + 
                      oPatch.T111 * 6.0 * w * u * v;
+
     fragdata.position = pos;
     fragdata.uv = tex;
 

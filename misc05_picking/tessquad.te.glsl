@@ -69,22 +69,22 @@ void main() {
     vec3 p0 = oPatch.B0, p1 = oPatch.B1, p2 = oPatch.B2, p3 = oPatch.B3;
 
 
-    float bu0 = (1. - u) * (1.-u) * (1.-u);
-	float bu1 = 3. * u * (1.-u) * (1.-u);
-	float bu2 = 3. * u * u * (1.-u);
+    float bu0 = pow(1. - u, 3);
+	float bu1 = 3. * u * pow(1. - u, 2);
+	float bu2 = 3. * u * u * (1. - u);
 	float bu3 = u * u * u;
 
-	float bv0 = (1. - v) * (1.-v) * (1.-v);
-	float bv1 = 3. * v * (1.-v) * (1.-v);
-	float bv2 = 3. * v * v * (1.-v);
+	float bv0 = pow(1. - v, 3);
+	float bv1 = 3. * v * pow(1. - v, 2); 
+	float bv2 = 3. * v * v * (1. - v);
 	float bv3 = v * v * v;
 
-    vec3 pos = bu0 * (bv0* oPatch.B0 + bv1 * oPatch.B01 + bv2 * oPatch.B10 + bv3 * oPatch.B1) 
+    vec3 pos = bu0 * (bv0 * oPatch.B0 + bv1 * oPatch.B01 + bv2 * oPatch.B10 + bv3 * oPatch.B1) 
           + bu1 * (bv0 * oPatch.B03 + bv1 * oPatch.B02 + bv2 * oPatch.B13 + bv3 * oPatch.B12) 
           + bu2 * (bv0 * oPatch.B30 + bv1 * oPatch.B31 + bv2 * oPatch.B20 + bv3 * oPatch.B21) 
            + bu3 * (bv0 * oPatch.B3 + bv1 * oPatch.B32 + bv2 * oPatch.B23 + bv3 * oPatch.B2);
     
-    vec2 tex = bu0 * (bv0* oPatch.T0 + bv1 * oPatch.T01 + bv2 * oPatch.T10 + bv3 * oPatch.T1) 
+    vec2 tex = bu0 * (bv0 * oPatch.T0 + bv1 * oPatch.T01 + bv2 * oPatch.T10 + bv3 * oPatch.T1) 
           + bu1 * (bv0 * oPatch.T03 + bv1 * oPatch.T02 + bv2 * oPatch.T13 + bv3 * oPatch.T12) 
           + bu2 * (bv0 * oPatch.T30 + bv1 * oPatch.T31 + bv2 * oPatch.T20 + bv3 * oPatch.T21) 
            + bu3 * (bv0 * oPatch.T3 + bv1 * oPatch.T32 + bv2 * oPatch.T23 + bv3 * oPatch.T2);
@@ -101,29 +101,27 @@ void main() {
 	vec3 n2 = oPatch.Normal[2];
 	vec3 n3 = oPatch.Normal[3];
 	
-	float v01 = (2.*(dot(p1 - p0, n0 + n1) / dot(p1 - p0, p1 - p0)));
-	float v12 = (2.*(dot(p2 - p1, n1 + n2) / dot(p2 - p1, p2 - p1)));
-	float v23 = (2.*(dot(p3 - p2, n2 + n3) / dot(p3 - p2, p3 - p2)));
-	float v30 = (2.*(dot(p0 - p3, n3 + n0) / dot(p0 - p3, p0 - p3)));
+	float v01 = (2. * (dot(p1 - p0, n0 + n1) / dot(p1 - p0, p1 - p0)));
+	float v12 = (2. * (dot(p2 - p1, n1 + n2) / dot(p2 - p1, p2 - p1)));
+	float v23 = (2. * (dot(p3 - p2, n2 + n3) / dot(p3 - p2, p3 - p2)));
+	float v30 = (2. * (dot(p0 - p3, n3 + n0) / dot(p0 - p3, p0 - p3)));
 	
 	vec3 n01 = normalize(n0 + n1 - v01*(p1 - p0));
 	vec3 n12 = normalize(n1 + n2 - v12*(p2 - p1));
 	vec3 n23 = normalize(n2 + n3 - v23*(p3 - p2));
 	vec3 n30 = normalize(n3 + n0 - v30*(p0 - p3));
 	
-	vec3 n0123 = ((2.*(n01 + n12 + n23 + n30)) + (n0 + n1 + n2 + n3)) / 12.;
+	vec3 n0123 = ((2. * (n01 + n12 + n23 + n30)) + (n0 + n1 + n2 + n3)) / 12.;
 	
-	float nu0 = (1.-u) * (1.-u);
-	float nu1 = 2. * u * (1.-u);
+	float nu0 = pow(1. - u, 2);
+	float nu1 = 2. * u * (1. - u);
 	float nu2 = u * u;
 	
-	float nv0 = (1.-v) * (1.-v);
-	float nv1 = 2. * v * (1.-v);
+	float nv0 = pow(1. - v, 2);
+	float nv1 = 2. * v * (1. - v);
 	float nv2 = v * v;
 	
-	fragdata.normal = nu0*(nv0*n0 + nv1*n01 + nv2*n1)
-                + nu1*(nv0*n30 + nv1*n0123 + nv2*n12)
-                + nu2*(nv0*n3 + nv1*n23 + nv2*n2);
+	fragdata.normal = nu0 * (nv0  *n0 + nv1 * n01 + nv2 * n1) + nu1 * (nv0 * n30 + nv1 * n0123 + nv2 * n12) + nu2 * (nv0 * n3 + nv1 * n23 + nv2 * n2);
 
     fragdata.position = pos;
 
