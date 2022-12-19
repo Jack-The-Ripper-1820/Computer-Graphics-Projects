@@ -1,4 +1,5 @@
 // Include standard headers
+// Include standard headers
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
@@ -34,19 +35,19 @@ typedef struct Vertex {
 	float Position[4];
 	float Color[4];
 	float Normal[3];
-	void SetPosition(float *coords) {
+	void SetPosition(float* coords) {
 		Position[0] = coords[0];
 		Position[1] = coords[1];
 		Position[2] = coords[2];
 		Position[3] = 1.0;
 	}
-	void SetColor(float *color) {
+	void SetColor(float* color) {
 		Color[0] = color[0];
 		Color[1] = color[1];
 		Color[2] = color[2];
 		Color[3] = color[3];
 	}
-	void SetNormal(float *coords) {
+	void SetNormal(float* coords) {
 		Normal[0] = coords[0];
 		Normal[1] = coords[1];
 		Normal[2] = coords[2];
@@ -57,7 +58,7 @@ typedef struct Vertex {
 int initWindow(void);
 void initOpenGL(void);
 void createVAOs(Vertex[], GLushort[], int);
-void loadObject(char*, glm::vec4, Vertex* &, GLushort* &, size_t &, int);
+void loadObject(char* file, glm::vec4 color, Vertex*& out_Vertices, GLushort*& out_Indices, size_t& VertCount, int ObjectId);
 void createObjects(void);
 void pickObject(void);
 void renderScene(float);
@@ -65,11 +66,11 @@ void cleanup(void);
 static void keyCallback(GLFWwindow*, int, int, int, int);
 static void mouseCallback(GLFWwindow*, int, int, int);
 void translateObject(Vertex*& Verts, vec3 trans, int ObjectId, size_t VertCount);
-void rotatePen(float, mat4 &);
-void moveBase(vec3 &, float);
+void rotatePen(float, mat4&);
+void moveBase(vec3&, float);
 void moveBase(float);
 void updateLight();
-void moveTop(float, mat4 &);
+void moveTop(float, mat4&);
 vec3 avgPos(Vertex*, const size_t);
 void changeOpacity(Vertex*, const size_t, bool, int);
 
@@ -161,7 +162,7 @@ int initWindow(void) {
 	// Initialize the GUI
 	TwInit(TW_OPENGL_CORE, NULL);
 	TwWindowSize(window_width, window_height);
-	TwBar * GUI = TwNewBar("Picking");
+	TwBar* GUI = TwNewBar("Picking");
 	TwSetParam(GUI, NULL, "refresh", TW_PARAM_CSTRING, 1, "0.1");
 	TwAddVarRW(GUI, "Last picked object", TW_TYPE_STDSTRING, &gMessage, NULL);
 
@@ -193,13 +194,13 @@ void initOpenGL(void) {
 	//gViewMatrix = glm::lookAt(glm::vec3(10.0, 10.0, 10.0f),	// eye
 	//	glm::vec3(0.0, 0.0, 0.0),	// center
 	//	glm::vec3(0.0, 1.0, 0.0));	// up
-	
+
 	gViewMatrix = glm::lookAt(cameraPos,	// eye
 		glm::vec3(0.0, 0.0, 0.0),	// center
 		worldUp);	// up
 
 	updateLight();
-	
+
 	// Create and compile our GLSL program from the shaders
 	programID = LoadShaders("StandardShading.vertexshader", "StandardShading.fragmentshader");
 	pickingProgramID = LoadShaders("Picking.vertexshader", "Picking.fragmentshader");
@@ -319,8 +320,8 @@ void createObjects(void) {
 	CoordVerts[2] = { { 0.0, 0.0, 0.0, 1.0 }, { 0.0, 1.0, 0.0, 1.0 }, { 0.0, 0.0, 1.0 } };
 	CoordVerts[3] = { { 0.0, 5.0, 0.0, 1.0 }, { 0.0, 1.0, 0.0, 1.0 }, { 0.0, 0.0, 1.0 } };
 	CoordVerts[4] = { { 0.0, 0.0, 0.0, 1.0 }, { 0.0, 0.0, 1.0, 1.0 }, { 0.0, 0.0, 1.0 } };
-	CoordVerts[5] = { { 0.0, 0.0, 5.0, 1.0 }, { 0.0, 0.0, 1.0, 1.0 }, { 0.0, 0.0, 1.0 } }; 
-	
+	CoordVerts[5] = { { 0.0, 0.0, 5.0, 1.0 }, { 0.0, 0.0, 1.0, 1.0 }, { 0.0, 0.0, 1.0 } };
+
 	//-- GRID --//
 	// ATTN: Create your grid vertices here!
 	int ind = 0;
@@ -472,7 +473,7 @@ vec4 P2;
 vec4 P1;
 float startTimeL = 0;
 
-void bezierProjectile(float deltatime, mat4 &ModelMatrix) {
+void bezierProjectile(float deltatime, mat4& ModelMatrix) {
 	//glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelMatrix[0][0]);
 
 	vec4 ProjPos = vec4(avgPos(ProjVerts, ProjVertCount), 1);
@@ -491,7 +492,7 @@ void bezierProjectile(float deltatime, mat4 &ModelMatrix) {
 
 	BezierVerts[ind].SetPosition(new float[4] {Cx, Cy, Cz, 1});
 	//vec3 ProjPos = avgPos(ProjVerts, ProjVertCount);
-	float dx = Cx - ProjPos.x, dy = Cy - ProjPos.y, dz = Cz - ProjPos.z;   
+	float dx = Cx - ProjPos.x, dy = Cy - ProjPos.y, dz = Cz - ProjPos.z;
 	minY = std::min(minY, Cy);
 	//cout << "Cuve coords: " << Cx << " " << Cy << " " << Cz << endl;
 
@@ -511,7 +512,7 @@ void bezierProjectile(float deltatime, mat4 &ModelMatrix) {
 }
 
 
-void launchProjectile(float deltatime, mat4 &ModelMatrix) {
+void launchProjectile(float deltatime, mat4& ModelMatrix) {
 	vec4 Position1 = vec4(PenVerts[7].Position[0], PenVerts[7].Position[1], PenVerts[7].Position[2], 1);
 	vec4 Position2 = vec4(PenVerts[16].Position[0], PenVerts[16].Position[1], PenVerts[16].Position[2], 1);
 	float theta = atan(Position1.y - Position2.y / Position1.x - Position2.x);
@@ -548,7 +549,7 @@ void launchProjectile(float deltatime, mat4 &ModelMatrix) {
 
 }
 
-void moveTop(float deltatime, mat4 & ModelMatrix) {
+void moveTop(float deltatime, mat4& ModelMatrix) {
 
 	if (glfwGetKey(window, GLFW_KEY_LEFT)) {
 		gOrientationTop.y -= radians(90.f) * deltatime;
@@ -610,9 +611,9 @@ void renderScene(float deltaTime) {
 		glDrawArrays(GL_LINES, 0, NumVerts[0]);
 
 		glBindVertexArray(VertexArrayId[1]);	// Draw Grid
-		glDrawArrays(GL_LINES, 0, NumVerts[1]); 
+		glDrawArrays(GL_LINES, 0, NumVerts[1]);
 		//glDrawArrays(GL_POINTS, 0, NumVerts[1]);
-		
+
 
 		glBindVertexArray(VertexArrayId[2]);	// Draw Vertices
 		//glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
@@ -667,7 +668,7 @@ void renderScene(float deltaTime) {
 		glDrawElements(GL_TRIANGLES, NumIdcs[6], GL_UNSIGNED_SHORT, (void*)0);
 
 		trans = vec3(PenVerts[22].Position[0], PenVerts[22].Position[1], PenVerts[22].Position[2]);
-		TranslationMatrix = translate(mat4(), -trans); 
+		TranslationMatrix = translate(mat4(), -trans);
 		TranslationMatrix1 = translate(mat4(), trans);
 
 		if (pPress) {
@@ -685,11 +686,11 @@ void renderScene(float deltaTime) {
 		glDrawElements(GL_TRIANGLES, NumIdcs[8], GL_UNSIGNED_SHORT, (void*)0);
 
 		if (sPress) {
-			
-				//launchProjectile(deltaTime, ModelMatrix);
-				bezierProjectile(deltaTime, ModelMatrix);
-				glBindVertexArray(VertexArrayId[9]);	// Draw Vertices
-				glDrawElements(GL_TRIANGLES, NumIdcs[9], GL_UNSIGNED_SHORT, (void*)0);
+
+			//launchProjectile(deltaTime, ModelMatrix);
+			bezierProjectile(deltaTime, ModelMatrix);
+			glBindVertexArray(VertexArrayId[9]);	// Draw Vertices
+			glDrawElements(GL_TRIANGLES, NumIdcs[9], GL_UNSIGNED_SHORT, (void*)0);
 		}
 		glBindVertexArray(0);
 	}
@@ -716,7 +717,7 @@ void cleanup(void) {
 	glfwTerminate();
 }
 
-void translateObject(Vertex* &Verts, vec3 trans, int ObjectId, size_t VertCount) {
+void translateObject(Vertex*& Verts, vec3 trans, int ObjectId, size_t VertCount) {
 	for (int i = 0; i < VertCount; i++) {
 		vec4 vec(Verts[i].Position[0] + trans[0], Verts[i].Position[1] + trans[1], Verts[i].Position[2] + trans[2], Verts[i].Position[3]);
 		Verts[i].SetPosition(new float[4] {vec[0], vec[1], vec[2], vec[3]});
@@ -735,7 +736,7 @@ vec3 avgPos(Vertex* Verts, const size_t VertCount) {
 		sy += Verts[i].Position[1];
 		sz += Verts[i].Position[2];
 	}
-	
+
 	return vec3(sx / VertCount, sy / VertCount, sz / VertCount);
 }
 
@@ -755,7 +756,7 @@ void rotatePen(float deltaTime, mat4& ModelMatrix) {
 	else {
 		if (glfwGetKey(window, GLFW_KEY_LEFT)) {
 			gOrientationPen.y -= radians(90.f) * deltaTime;
-		}  
+		}
 
 		else if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
 			gOrientationPen.y += radians(90.f) * deltaTime;
@@ -768,11 +769,11 @@ void rotatePen(float deltaTime, mat4& ModelMatrix) {
 		else if (glfwGetKey(window, GLFW_KEY_DOWN)) {
 			gOrientationPen.x += radians(90.f) * deltaTime;
 		}
-	} 
+	}
 }
 
 void moveBase(vec3& trans, float deltatime) {
-	trans = trans - avgPos(BaseVerts, BaseVertCount); 
+	trans = trans - avgPos(BaseVerts, BaseVertCount);
 	trans.y = 0;
 
 	//trans *= deltatime;
@@ -789,7 +790,7 @@ void moveBase(vec3& trans, float deltatime) {
 
 void moveBase(float deltatime) {
 	if (!bPress) return;
-	
+
 	vec3 trans;
 
 	if (glfwGetKey(window, GLFW_KEY_LEFT)) {
@@ -823,7 +824,7 @@ void resetProjectile() {
 	for (int i = 0; i < ProjVertCount; i++) {
 		ProjVerts[i].SetPosition(InitProjVerts[i].Position);
 	}
-} 
+}
 
 float prevX = 10.f, prevZ = 10.f, prevY = 10.f;
 // Alternative way of triggering functions on keyboard events
@@ -972,7 +973,7 @@ int main(void) {
 		double currentTime = glfwGetTime();
 		nbFrames++;
 		double deltaTime = currentTime - lastTime;
-		if (deltaTime >= 1.0){ // If last prinf() was more than 1sec ago
+		if (deltaTime >= 1.0) { // If last prinf() was more than 1sec ago
 			printf("%f ms/frame\n", 1000.0 / double(nbFrames));
 			nbFrames = 0;
 			lastTime += 1.0;
@@ -991,7 +992,7 @@ int main(void) {
 
 	} // Check if the ESC key was pressed or the window was closed
 	while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
-	glfwWindowShouldClose(window) == 0);
+		glfwWindowShouldClose(window) == 0);
 
 	cleanup();
 
