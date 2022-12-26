@@ -26,7 +26,9 @@ Initialize P0i=Pi (white points).
 Use these formulas to create a refined set of control points (cyan)
 
 Pk2i:=4Pk−1i−1+4Pk−1i8
+
 Pk2i+1:=Pk−1i−1+6Pk−1i+Pk−1i+18
+
 where k is the level of subdivison and
 i is the index of points is in range 0…(N×2k−1) .
 
@@ -45,6 +47,7 @@ The coefficients of the ith curve are ci={ci,0,ci,1,ci,2,ci,3}.
 The interior Bézier points (yellow) are:
 
 ci,1:=2Pi+Pi+13
+
 ci,2:=Pi+2Pi+13
 
 Determine ci,0 and ci,3=ci+1,0 so that the polynomial pieces join C1.
