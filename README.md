@@ -171,7 +171,5 @@ Points: 12+3
     -   The  u  key toggles show/hide of the texture.
     
    ### _BONUS:_
--   enable picking of the vertices (nodes) of the coarse input mesh.
--   Animate the front of your face: to show a smile (explain picking usage in Readme.txt)
 -   Use the tessellation engine for Task 3.
 
